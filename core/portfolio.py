@@ -53,50 +53,62 @@ async def get_fx_rate(ib, from_currency, to_currency) -> float:
 
 
 async def check_portfolio() -> None:
+    """
+    Connects to IBKR, fetches the user's portfolio, downloads historical data, 
+    calculates risk metrics, and runs a Monte Carlo simulation.
+    """
     TRADING_DAYS = 252
     base_currency = ""
     total_value = 0.0
 
     ib = IB()
-    await ib.connectAsync('127.0.0.1', 4001, clientId=1)  # 4002 for paper trading, 4001 for live accounts using IB Gateway
+    await ib.connectAsync('127.0.0.1', 4002, clientId=1)
     print(f"Connected to IBKR: {ib.isConnected()}\n")
 
     try:
-        # get account summary to find base currency and total liquidation value
+        # --- 1. Fetch Base Currency, Total Value & Cash ---
         summary = await ib.accountSummaryAsync()
+        
+        # get total portfolio value and base currency from account summary
         for item in summary:
             if item.tag == "NetLiquidation":
                 total_value = float(item.value)
                 base_currency = item.currency
-                break
+            elif item.tag == "TotalCashValue":
+                cash_value_base = float(item.value)
                 
-        print(f"Net Liquidation Value: {total_value} {base_currency}\n")
+        print(f"Net Liquidation Value: {total_value} {base_currency}")
+        print(f"Total Cash Value: {cash_value_base} {base_currency}\n")
 
-        # get positions and calculate weights with FX conversion
         portfolio_items = ib.portfolio()
-        print("Calculating portfolio weights (with FX conversion to base currency)...")
-        
-        weights_dict = {} # Map: symbol -> weight
-        
+        weights_dict = {}
+        risky_assets = []
+
+        # --- 2. Filter CASH and Calculate Weights in Base Currency ---
+        print("Calculating portfolio weights with FX conversion...")
         for item in portfolio_items:
+            if item.contract.secType == 'CASH':
+                continue 
+                
+            risky_assets.append(item)
             symbol = item.contract.symbol
-            asset_currency = item.contract.currency
-            market_value_local = item.marketValue
             
-            fx_rate = await get_fx_rate(ib, asset_currency, base_currency)
-            market_value_base = market_value_local * fx_rate
+            # convert market value to base currency for weight calculation
+            fx_rate = await get_fx_rate(ib, item.contract.currency, base_currency)
+            market_value_base = item.marketValue * fx_rate
             
             weight = (market_value_base / total_value) if total_value > 0 else 0
             weights_dict[symbol] = weight
             
-            print(f"{symbol}: {market_value_local:.2f} {asset_currency} -> {market_value_base:.2f} {base_currency} (Weight: {weight*100:.2f}%)")
+            print(f"{symbol}: {item.marketValue:.2f} {item.contract.currency} -> {market_value_base:.2f} {base_currency} (Weight: {weight*100:.2f}%)")
 
-        print(f"\nInvested weight sum: {sum(weights_dict.values())*100:.2f}%\n")
+        cash_weight = (cash_value_base / total_value) if total_value > 0 else 0
+        print(f"\nRisky Assets Weight: {sum(weights_dict.values())*100:.2f}% | Cash Weight: {cash_weight*100:.2f}%\n")
 
-        # Download historical data for all assets in the portfolio
-        price_dict = {} # temporary dictionary to hold price series for each symbol
+        # --- 3. Download Historical Data (Total Return) ---
+        all_prices = pd.DataFrame()
         
-        for item in portfolio_items:
+        for item in risky_assets:
             symbol = item.contract.symbol
             print(f"Downloading historical data for {symbol}...")
             await ib.qualifyContractsAsync(item.contract)
@@ -106,62 +118,67 @@ async def check_portfolio() -> None:
                 endDateTime='',
                 durationStr='5 Y',
                 barSizeSetting='1 day',
-                whatToShow='TRADES',
+                whatToShow='ADJUSTED_LAST', 
                 useRTH=True
             )
             
             if bars:
                 df = util.df(bars)
+                # Normalize dates to strip timestamps and avoid timezone misalignments
+                df['date'] = pd.to_datetime(df['date']).dt.normalize()
                 df.set_index('date', inplace=True) 
-                df.index = pd.to_datetime(df.index)
-                price_dict[symbol] = df['close']
+                
+                # Outer join ensures that days where one exchange is closed (e.g., US holiday) but another is open (e.g., EU) don't break the alignment.
+                all_prices = all_prices.join(df['close'].rename(symbol), how='outer')
             else:
                 print(f"  -> No historical data for {symbol}, skipping...")
                 
-            await asyncio.sleep(1) 
+            await asyncio.sleep(1) # Pacing to respect IBKR API limits
 
-        # create a DataFrame with all price series, aligned by date
-        all_prices = pd.DataFrame(price_dict)
+        # --- 4. Data Cleansing & Alignment ---
+        # Forward fill propagates the last known price for days when a specific market was closed.
+        all_prices.ffill(inplace=True) 
+        all_prices.dropna(inplace=True) # Drop initial rows where some assets didn't exist yet
         
-        # Forward fill and dropna
-        all_prices.ffill(inplace=True)
-        all_prices.dropna(inplace=True)
-        
-        # pairing weights with the order of columns in the price DataFrame
         valid_symbols = all_prices.columns.tolist()
-        weight_array = np.array([weights_dict[sym] for sym in valid_symbols])
         
-        print(f"valid assets for covariance matrix: {valid_symbols}")
+        # --- 5. Risk Metrics Calculation (Risky Assets Only) ---
+        # Re-normalize weights for the covariance matrix calculation
+        sum_risky_weights = sum([weights_dict[sym] for sym in valid_symbols])
+        normalized_risky_weights = np.array([weights_dict[sym] / sum_risky_weights for sym in valid_symbols])
         
-        # calculate daily returns and covariance matrix
         all_returns = all_prices.pct_change().dropna()
         cov_matrix = all_returns.cov()
         
-        # Variance: w^T * Cov * w
-        port_variance = np.dot(weight_array.T, np.dot(cov_matrix.values, weight_array))
+        # Calculate daily portfolio variance: w^T * Cov * w
+        port_variance = np.dot(normalized_risky_weights.T, np.dot(cov_matrix.values, normalized_risky_weights))
         annual_volatility = get_annual_volatility(annualize(port_variance, TRADING_DAYS))
         
-        # calculate mean daily returns for each asset
+        # Calculate expected daily returns (historical mean)
         mean_daily_returns = all_returns.mean()
-        # calculate portfolio expected return as weighted average of mean daily returns
-        daily_mu = np.dot(weight_array, mean_daily_returns.values)
-        # annualize expected return
+        daily_mu = np.dot(normalized_risky_weights, mean_daily_returns.values)
         annual_mu = daily_mu * TRADING_DAYS
         
+        # --- 6. Cash Buffer Integration ---
+        # Re-apply the dampening effect of cash to the overall portfolio metrics.
+        # Assuming a conservative 2% risk-free rate for cash holding.
+        risk_free_rate = 0.02
+        total_portfolio_mu = (annual_mu * sum_risky_weights) + (risk_free_rate * cash_weight) 
+        total_portfolio_vol = annual_volatility * sum_risky_weights 
+        
         print("\n--- RESULTS ---")
-        print(f"Daily Portfolio Variance: {port_variance:.6f}")
-        print(f"Annualized Portfolio Volatility (Sigma): {annual_volatility * 100:.2f}%")
-        print(f"Annualized Expected Return (Mu): {annual_mu * 100:.2f}%")
+        print(f"Annualized Expected Return (Mu): {total_portfolio_mu * 100:.2f}%")
+        print(f"Annualized Portfolio Volatility (Sigma): {total_portfolio_vol * 100:.2f}%")
 
-        # Run Monte Carlo Simulation
+        # --- 7. Monte Carlo Execution ---
         print("\nRunning Monte Carlo Simulation...")
-        simulator = MonteCarloSimulator(capital=total_value, mu=annual_mu, sigma=annual_volatility, years=5, simulations=100000)
+        simulator = MonteCarloSimulator(capital=total_value, mu=total_portfolio_mu, sigma=total_portfolio_vol, years=5, simulations=100000)
         simulated_prices = simulator.simulate()
         scenarios = simulator.get_scenarios(simulated_prices)
+        
         print(f"\n--- 5-YEAR SIMULATION RESULTS ---")
         for scenario, value in scenarios.items():
-            print(f"{scenario} Scenario: € {value:,.2f}")
-
+            print(f"{scenario} Scenario: {base_currency} {value:,.2f}")
 
     finally:
         ib.disconnect()
