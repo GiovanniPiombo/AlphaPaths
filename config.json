@@ -1,0 +1,5 @@
+{
+    "GEMINI_API_KEY": "YOUR API KEY",
+    "GEMINI_MODEL": "gemini-3-flash-preview",
+    "RISK_FREE_RATE": 0.02
+}
