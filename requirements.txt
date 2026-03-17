@@ -6,3 +6,5 @@ numpy>=1.26.0
 ib-async>=1.0.0
 pyinstaller>=6.3.0
 pytest>=7.4.0
+pytest-asyncio>=0.21.0
+google-genai>=0.1.0
