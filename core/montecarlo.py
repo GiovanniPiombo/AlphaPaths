@@ -4,7 +4,7 @@ TRADING_DAYS_PER_YEAR = 252
 
 class MonteCarloSimulator:
     """
-    Monte Carlo simulator for financial portfolios based on Geometric Brownian Motion[cite: 8, 36, 37].
+    Monte Carlo simulator for financial portfolios based on Geometric Brownian Motion.
     Calculates price evolution and probabilistic scenarios (Worst, Median, Best).
     """
 

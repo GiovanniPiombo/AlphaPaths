@@ -1,7 +1,7 @@
 from google import genai
 from google.genai import types
 import json
-from utils import *
+from core.utils import *
 
 # Load configuration and initialize the client
 try:
