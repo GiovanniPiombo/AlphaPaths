@@ -14,7 +14,7 @@ class PortfolioManager:
     """
     TRADING_DAYS = 252
 
-    def __init__(self, host='127.0.0.1', port=4002, client_id=1):
+    def __init__(self, host='127.0.0.1', port=4001, client_id=1):
         self.ib = IB()
         self.host = host
         self.port = port
@@ -241,7 +241,7 @@ class PortfolioManager:
         scenarios = simulator.get_scenarios(simulated_prices)
         
         # Visualization (can be disconnected when you use a Qt canvas)
-        plot_portfolio_montecarlo(simulated_prices)
+        #plot_portfolio_montecarlo(simulated_prices)
         
         return scenarios, simulated_prices
 

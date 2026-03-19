@@ -1,14 +1,20 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView, QFrame, QMessageBox
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal, QTimer
 from workers.ibkr_thread import IBKRWorker
 
 class DashboardPage(QWidget):
+    """The DashboardPage class provides a user interface for displaying the user's IBKR portfolio summary and open positions. It includes a refresh button to fetch the latest data from the IBKR API using a background thread (IBKRWorker) to avoid freezing the UI. The class also emits a custom signal (dashboard_refreshed) when the data fetching and UI update process is complete, allowing other components (like the SimulationPage) to react accordingly, such as starting Monte Carlo simulations with the newly fetched data."""
+    dashboard_refreshed = Signal()
+
     def __init__(self):
+        """Initializes the DashboardPage, sets up the UI, and prepares for background data loading."""
         super().__init__()
         self.worker = None
         self.setup_ui()
+        QTimer.singleShot(100, self.start_refresh)
 
     def setup_ui(self):
+        """Sets up the user interface components of the DashboardPage, including summary cards, a refresh button, and a table for open positions."""
         main_layout = QVBoxLayout(self)
         main_layout.setSpacing(20)
         main_layout.setContentsMargins(28, 24, 28, 24)
@@ -64,7 +70,7 @@ class DashboardPage(QWidget):
         main_layout.addWidget(self.positions_table)
 
     def create_summary_card(self, title: str, initial_value: str, value_type: str):
-        """Helper function to create a styled summary card with a title and value label."""
+        """Creates a styled summary card with a title and a value label. The value label's color is determined by the value_type (positive, negative, neutral). Returns the card widget and the value label for later updates."""
         card = QFrame()
         card.setObjectName("summary_card")
         card.setFrameShape(QFrame.StyledPanel)
@@ -91,7 +97,7 @@ class DashboardPage(QWidget):
     }
 
     def _set_card_value(self, label: QLabel, text: str, value_type: str):
-        """Update a card's value and apply color directly via inline stylesheet."""
+        """Updates the text and color of a summary card's value label based on the value_type (positive, negative, neutral)."""
         color = self.VALUE_COLORS.get(value_type, "#E8EDF5")
         label.setText(text)
         label.setStyleSheet(
@@ -103,6 +109,7 @@ class DashboardPage(QWidget):
         )
 
     def start_refresh(self):
+        """Starts the process of refreshing IBKR data by creating and running an IBKRWorker thread. It also updates the refresh button's state and text to provide feedback to the user."""
         print("\n[UI DEBUG] 1. Button clicked! Starting function...")
         self.refresh_btn.setEnabled(False)
         self.refresh_btn.setText("Connecting...")
@@ -117,14 +124,13 @@ class DashboardPage(QWidget):
         self.worker.start()
 
     def on_data_fetched(self, data):
-        """Receives data from the thread and populates the UI."""
+        """Handles the data received from the IBKRWorker thread, updates the UI with the new portfolio summary and positions, and emits a signal to notify that the dashboard has been refreshed and simulations can start."""
         print("[UI DEBUG] 5. Data received from thread! Updating UI...")
 
         cur = data['currency']
         self._set_card_value(self.nlv_label, f"{cur} {data['nlv']:,.2f}", "neutral")
         self._set_card_value(self.cash_label, f"{cur} {data['cash']:,.2f}", "neutral")
 
-        # Color P&L green/red based on sign
         pnl = data['pnl']
         pnl_type = "positive" if pnl >= 0 else "negative"
         pnl_sign = "+" if pnl >= 0 else ""
@@ -140,8 +146,12 @@ class DashboardPage(QWidget):
 
         self.refresh_btn.setEnabled(True)
         self.refresh_btn.setText("Refresh IBKR Data")
+        
+        print("[UI DEBUG] 6. Dashboard finished. Emitting signal to start Monte Carlo...")
+        self.dashboard_refreshed.emit()
 
     def on_error(self, error_msg):
+        """Handles errors emitted by the IBKRWorker thread, updates the refresh button's state and text, and shows a critical message box to inform the user about the error."""
         print(f"[UI DEBUG] Error received: {error_msg}")
         self.refresh_btn.setEnabled(True)
         self.refresh_btn.setText("Refresh IBKR Data")

@@ -2,16 +2,18 @@ from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QP
 from PySide6.QtCore import Qt
 
 from pages.dashboard_page import DashboardPage
-
+from pages.simulation_page import SimulationPage
 
 class MainWindow(QMainWindow):
     def __init__(self):
+        """Main application window with sidebar navigation and stacked pages."""
         super().__init__()
         self.setWindowTitle("IBKR Portfolio Analyzer")
         self.resize(1100, 700)
         self.setup_ui()
 
     def setup_ui(self):
+        """Sets up the main UI components: sidebar and content area."""
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
@@ -54,12 +56,7 @@ class MainWindow(QMainWindow):
         self.dashboard_page = DashboardPage()
         self.stacked_widget.addWidget(self.dashboard_page)
 
-        # Simulation placeholder
-        self.simulation_page = QWidget()
-        sim_layout = QVBoxLayout(self.simulation_page)
-        wip1 = QLabel("Work in Progress...")
-        wip1.setObjectName("wip_label")
-        sim_layout.addWidget(wip1, alignment=Qt.AlignCenter)
+        self.simulation_page = SimulationPage()
         self.stacked_widget.addWidget(self.simulation_page)
 
         # AI Review placeholder
@@ -77,8 +74,10 @@ class MainWindow(QMainWindow):
         self.btn_dashboard.clicked.connect(lambda: self.switch_page(0, self.btn_dashboard))
         self.btn_simulation.clicked.connect(lambda: self.switch_page(1, self.btn_simulation))
         self.btn_ai_review.clicked.connect(lambda: self.switch_page(2, self.btn_ai_review))
+        self.dashboard_page.dashboard_refreshed.connect(self.simulation_page.start_background_preload)
 
     def switch_page(self, index, button):
+        """Switches the visible page in the stacked widget and updates button states."""
         self.stacked_widget.setCurrentIndex(index)
         for btn in (self.btn_dashboard, self.btn_simulation, self.btn_ai_review):
             btn.setChecked(False)

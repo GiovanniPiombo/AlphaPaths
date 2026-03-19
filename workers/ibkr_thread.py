@@ -9,6 +9,7 @@ class IBKRWorker(QThread):
     progress_update = Signal(str)
 
     def run(self):
+        """This method is called when the thread starts. It creates a new event loop and runs the asynchronous data fetching method."""
         print("\n[DEBUG] 1. THREAD STARTED: Creating event loop...")
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -26,7 +27,7 @@ class IBKRWorker(QThread):
             print("[DEBUG] THREAD FINISHED.\n")
 
     async def fetch_data_from_manager(self):
-        # Instantiate the new Object-Oriented manager
+        """This method connects to the IBKR API, fetches the portfolio summary and positions, and returns the data in a dictionary format suitable for the UI. It also emits progress updates at each step."""
         manager = PortfolioManager(host='127.0.0.1', port=4001, client_id=1)
         
         self.progress_update.emit("Connecting to IBKR...")

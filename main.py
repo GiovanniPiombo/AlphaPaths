@@ -2,7 +2,6 @@ import sys
 from PySide6.QtWidgets import QApplication
 from main_window import MainWindow
 
-
 def load_stylesheet(app: QApplication, path: str) -> None:
     """Load and apply a QSS stylesheet to the application."""
     try:
@@ -10,7 +9,6 @@ def load_stylesheet(app: QApplication, path: str) -> None:
             app.setStyleSheet(f.read())
     except FileNotFoundError:
         print(f"[WARN] Stylesheet not found: {path}")
-
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
