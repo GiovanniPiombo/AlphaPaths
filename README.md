@@ -9,20 +9,7 @@
 Desktop application for advanced risk analysis and Monte Carlo simulation of financial portfolios. It connects directly to Interactive Brokers (IBKR) to fetch real positions, calculates future projections using stochastic models (Geometric Brownian Motion), and provides intelligent, conversational feedback via Google's Gemini AI.
 
 Built with a clean, modular architecture that strictly separates the UI (PySide6), background threads (QThread), and pure business logic, ensuring a responsive user experience even during complex calculations.
-<<<<<<< HEAD
-=======
 
-## 📋 Table of Contents
-- [Key Features](#key-features)
-- [Project Structure](#project-structure)
-- [Technology Stack](#technology-stack)
-- [Installation and Setup](#installation-and-setup)
-  - [Prerequisites](#prerequisites)
-  - [Step-by-Step Guide](#step-by-step-guide)
-- [How to Use](#how-to-use)
-- [Running Tests](#running-tests)
->>>>>>> 3111f640c6db8aab110a2eb2308d4e5402281f99
-  
 ## Key Features
 
 *   **Direct IBKR Integration:** Automatically downloads real portfolio data (Net Liquidation Value, Cash, Positions, Daily P&L) via the `ib_async` library. Supports multi-currency portfolios with automatic FX conversion.
