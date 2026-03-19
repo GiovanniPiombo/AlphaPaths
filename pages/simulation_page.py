@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushBu
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.ticker import FuncFormatter
-
+from PySide6.QtCore import Qt, Signal
 from workers.simulation_thread import SimulationWorker, FastMathWorker
 
 class MplCanvas(FigureCanvas):
@@ -27,6 +27,7 @@ class MplCanvas(FigureCanvas):
 
 class SimulationPage(QWidget):
     """The SimulationPage class provides a user interface for running Monte Carlo simulations on the user's portfolio. It includes controls for selecting the number of years and simulations, summary cards for displaying key metrics, and an embedded Matplotlib graph to visualize the simulation results. The class uses background threads to perform calculations without freezing the UI, and it caches certain variables to optimize performance for subsequent runs."""
+    simulation_finished = Signal(dict)
     def __init__(self):
         """Initializes the SimulationPage, sets up the UI, and prepares for background data loading."""
         super().__init__()
@@ -192,6 +193,16 @@ class SimulationPage(QWidget):
         self.run_btn.setEnabled(True)
         self.run_btn.setText("Run Simulation")
 
+        sim_data = {
+            "total_value": capital,
+            "mu": mu * 100,
+            "sigma": sigma * 100,
+            "worst_case": scenarios["Worst (5%)"],
+            "median_case": scenarios["Median (50%)"],
+            "best_case": scenarios["Best (95%)"]
+        }
+        self.simulation_finished.emit(sim_data)
+
     def on_simulation_error(self, error_msg):
         """Triggered if something breaks in the thread."""
         self.run_btn.setEnabled(True)
@@ -240,3 +251,12 @@ class SimulationPage(QWidget):
         
         self.run_btn.setEnabled(True)
         self.run_btn.setText("Run Simulation")
+        sim_data = {
+            "total_value": self.cached_capital,
+            "mu": self.cached_mu * 100,
+            "sigma": self.cached_sigma * 100,
+            "worst_case": scenarios["Worst (5%)"],
+            "median_case": scenarios["Median (50%)"],
+            "best_case": scenarios["Best (95%)"]
+        }
+        self.simulation_finished.emit(sim_data)

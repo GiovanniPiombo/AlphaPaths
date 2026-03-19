@@ -3,7 +3,7 @@ from PySide6.QtCore import QThread, Signal
 from core.portfolio import PortfolioManager
 
 class IBKRWorker(QThread):
-    # Signals to communicate with the main GUI thread
+    """A QThread that connects to the IBKR API, fetches the portfolio summary and positions, and returns the data in a dictionary format suitable for the UI. It also emits progress updates at each step."""
     data_fetched = Signal(dict)
     error_occurred = Signal(str)
     progress_update = Signal(str)
@@ -28,7 +28,7 @@ class IBKRWorker(QThread):
 
     async def fetch_data_from_manager(self):
         """This method connects to the IBKR API, fetches the portfolio summary and positions, and returns the data in a dictionary format suitable for the UI. It also emits progress updates at each step."""
-        manager = PortfolioManager(host='127.0.0.1', port=4001, client_id=1)
+        manager = PortfolioManager(host='127.0.0.1', port=4002, client_id=1)
         
         self.progress_update.emit("Connecting to IBKR...")
         await manager.connect()

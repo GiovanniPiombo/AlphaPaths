@@ -8,6 +8,7 @@ class DashboardPage(QWidget):
 
     def __init__(self):
         """Initializes the DashboardPage, sets up the UI, and prepares for background data loading."""
+        self.cached_data = {}
         super().__init__()
         self.worker = None
         self.setup_ui()
@@ -148,6 +149,12 @@ class DashboardPage(QWidget):
         self.refresh_btn.setText("Refresh IBKR Data")
         
         print("[UI DEBUG] 6. Dashboard finished. Emitting signal to start Monte Carlo...")
+        self.cached_data = {
+            "currency": data['currency'],
+            "risky_weight": data['risky_weight'],
+            "cash_weight": data['cash_weight'],
+            "positions": data['positions']
+        }
         self.dashboard_refreshed.emit()
 
     def on_error(self, error_msg):

@@ -25,7 +25,7 @@ class SimulationWorker(QThread):
 
     async def run_simulation_tasks(self):
         """Asynchronous method that performs the simulation tasks step by step, emitting progress updates and final data."""
-        pm = PortfolioManager(host='127.0.0.1', port=4001, client_id=1)
+        pm = PortfolioManager(host='127.0.0.1', port=4002, client_id=1)
         
         self.progress_update.emit("Connecting to IBKR...")
         connected = await pm.connect()
@@ -81,6 +81,7 @@ class FastMathWorker(QThread):
     error_occurred = Signal(str)
 
     def __init__(self, capital, mu, sigma, years, simulations):
+        """Initializes the worker with the necessary parameters for the Monte Carlo simulation."""
         super().__init__()
         self.capital = capital
         self.mu = mu
@@ -89,6 +90,7 @@ class FastMathWorker(QThread):
         self.simulations = simulations
 
     def run(self):
+        """This method is called when the thread starts. It runs the Monte Carlo simulation and pre-calculates the lines for the graph, then emits the results back to the UI."""
         try:
             simulator = MonteCarloSimulator(
                 capital=self.capital,
