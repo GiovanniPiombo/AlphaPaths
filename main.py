@@ -1,24 +1,15 @@
 import sys
 from PySide6.QtWidgets import QApplication
 from main_window import MainWindow
-
-def load_stylesheet(app: QApplication, path: str) -> None:
-    """
-    Loads a QSS stylesheet from the specified path and applies it to the given QApplication instance.
-    
-    Args:
-        app (QApplication): The application instance to which the stylesheet will be applied.
-        path (str): The file path to the QSS stylesheet.
-    """
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            app.setStyleSheet(f.read())
-    except FileNotFoundError:
-        print(f"[WARN] Stylesheet not found: {path}")
+from core.path_manager import PathManager
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    load_stylesheet(app, "assets/style.qss")
+    if PathManager.STYLE_FILE.exists():
+        with open(PathManager.STYLE_FILE, "r") as f:
+            app.setStyleSheet(f.read())
+    else:
+        print(f"[WARNING] Style file not found at {PathManager.STYLE_FILE}")
     window = MainWindow()
     window.show()
     sys.exit(app.exec())

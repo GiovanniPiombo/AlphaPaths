@@ -4,6 +4,7 @@ from core.portfolio import PortfolioManager
 import numpy as np
 from core.montecarlo import MonteCarloSimulator
 from core.utils import read_json
+from core.path_manager import PathManager
 
 class SimulationWorker(QThread):
     """
@@ -66,9 +67,9 @@ class SimulationWorker(QThread):
             50th, and 95th percentile paths using NumPy vectorized sorting.
         """
 
-        host = read_json("config.json", "IBKR_HOST") or '127.0.0.1'
-        port = read_json("config.json", "IBKR_PORT") or 4001
-        client_id = read_json("config.json", "IBKR_CLIENT_ID") or 1
+        host = read_json(PathManager.CONFIG_FILE, "IBKR_HOST") or '127.0.0.1'
+        port = read_json(PathManager.CONFIG_FILE, "IBKR_PORT") or 4001
+        client_id = read_json(PathManager.CONFIG_FILE, "IBKR_CLIENT_ID") or 1
 
         pm = PortfolioManager(host=host, port=port, client_id=client_id)
         

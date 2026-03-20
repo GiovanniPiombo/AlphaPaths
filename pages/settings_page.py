@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDoubleSpinBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QComboBox
 from PySide6.QtCore import Qt
 from core.utils import read_json, write_json
+from core.path_manager import PathManager
 
 class SettingsPage(QWidget):
     """
@@ -129,7 +130,7 @@ class SettingsPage(QWidget):
         keys, it automatically falls back to safe default values to ensure 
         the UI renders without throwing exceptions.
         """
-        config = read_json("config.json")
+        config = read_json(PathManager.CONFIG_FILE)
         if config:
             self.api_key_input.setText(config.get("GEMINI_API_KEY", ""))
             self.model_input.setText(config.get("GEMINI_MODEL", "gemini-1.5-pro"))
@@ -153,7 +154,7 @@ class SettingsPage(QWidget):
         Upon successful write, it prompts the user with a dialog recommending 
         an application restart to apply changes globally.
         """
-        config = read_json("config.json")
+        config = read_json(PathManager.CONFIG_FILE)
         if not isinstance(config, dict):
             config = {}
             
@@ -170,7 +171,7 @@ class SettingsPage(QWidget):
         config["IBKR_CLIENT_ID"] = self.ibkr_client_id_input.value()
         config["IBKR_TIMEOUT"] = self.ibkr_timeout_input.value()
 
-        if write_json("config.json", config):
+        if write_json(PathManager.CONFIG_FILE, config):
             QMessageBox.information(
                 self, 
                 "Restart Recommended", 

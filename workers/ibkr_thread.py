@@ -2,6 +2,7 @@ import asyncio
 from PySide6.QtCore import QThread, Signal
 from core.portfolio import PortfolioManager
 from core.utils import read_json
+from core.path_manager import PathManager
 
 class IBKRWorker(QThread):
     """
@@ -64,9 +65,9 @@ class IBKRWorker(QThread):
         Returns:
             dict: The compiled portfolio data dictionary ready for UI consumption.
         """
-        host = read_json("config.json", "IBKR_HOST") or '127.0.0.1'
-        port = read_json("config.json", "IBKR_PORT") or 4001
-        client_id = read_json("config.json", "IBKR_CLIENT_ID") or 1
+        host = read_json(PathManager.CONFIG_FILE, "IBKR_HOST") or '127.0.0.1'
+        port = read_json(PathManager.CONFIG_FILE, "IBKR_PORT") or 4001
+        client_id = read_json(PathManager.CONFIG_FILE, "IBKR_CLIENT_ID") or 1
 
         manager = PortfolioManager(host=host, port=port, client_id=client_id)
         

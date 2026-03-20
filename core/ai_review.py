@@ -1,13 +1,14 @@
 from google import genai
 from google.genai import types
 import json
-from core.utils import *
+from core.utils import read_json, format_json
+from core.path_manager import PathManager
 
 # Load configuration and initialize the client
 try:
-    GEMINI_API_KEY = read_json("config.json", "GEMINI_API_KEY")
-    MODEL_NAME = read_json("config.json", "GEMINI_MODEL")
-    prompts_data = read_json("prompts.json")
+    GEMINI_API_KEY = read_json(PathManager.CONFIG_FILE, "GEMINI_API_KEY")
+    MODEL_NAME = read_json(PathManager.CONFIG_FILE, "GEMINI_MODEL")
+    prompts_data = read_json(PathManager.PROMPTS_FILE)
 except ValueError as e:
     print(f"Error: {e}")
     exit(1)

@@ -8,6 +8,7 @@ from pages.dashboard_page import DashboardPage
 from pages.simulation_page import SimulationPage
 from pages.ai_page import AIPage
 from core.utils import read_json
+from core.path_manager import PathManager
 
 class MainWindow(QMainWindow):
     """
@@ -135,7 +136,7 @@ class MainWindow(QMainWindow):
         self.shared_portfolio_data.update(sim_data)
         
         # Feed the combined data to the AI page so it can generate insights based on the full picture and language preference
-        ai_language = read_json("config.json", "AI_LANGUAGE") or "English"
+        ai_language = read_json(PathManager.CONFIG_FILE, "AI_LANGUAGE") or "English"
         self.shared_portfolio_data["language"] = ai_language
         
         self.ai_page.set_portfolio_data(self.shared_portfolio_data)
@@ -144,7 +145,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     # Load Stylesheet
     try:
-        with open("style.qss", "r") as f:
+        with open(PathManager.STYLE_FILE, "r") as f:
             app.setStyleSheet(f.read())
     except FileNotFoundError:
         print("[WARNING] style.qss not found. Running with default UI.")
