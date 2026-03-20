@@ -5,26 +5,7 @@ from matplotlib.ticker import FuncFormatter
 from PySide6.QtCore import Qt, Signal
 from workers.simulation_thread import SimulationWorker, FastMathWorker
 from core.utils import read_json
-
-class MplCanvas(FigureCanvas):
-    """Custom canvas to integrate Matplotlib in PySide6 with a dark theme."""
-    def __init__(self, parent=None, width=8, height=5, dpi=100):
-        self.fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = self.fig.add_subplot(111)
-        
-        # Apply dark theme
-        self.fig.patch.set_facecolor('#0D1117')
-        self.axes.set_facecolor('#0D1117')
-        self.axes.tick_params(colors='#C8D0DC')
-        self.axes.xaxis.label.set_color('#C8D0DC')
-        self.axes.yaxis.label.set_color('#C8D0DC')
-        self.axes.title.set_color('#E8EDF5')
-        
-        for spine in self.axes.spines.values():
-            spine.set_edgecolor('#1E2733')
-            
-        super().__init__(self.fig)
-
+from components.chart_widget import MonteCarloChartView
 
 class SimulationPage(QWidget):
     """The SimulationPage class provides a user interface for running Monte Carlo simulations on the user's portfolio. It includes controls for selecting the number of years and simulations, summary cards for displaying key metrics, and an embedded Matplotlib graph to visualize the simulation results. The class uses background threads to perform calculations without freezing the UI, and it caches certain variables to optimize performance for subsequent runs."""
@@ -101,9 +82,10 @@ class SimulationPage(QWidget):
         
         main_layout.addLayout(cards_layout)
 
-        # ── MATPLOTLIB CANVAS ────────────────────────────────
-        self.canvas = MplCanvas(self, width=8, height=5, dpi=100)
-        main_layout.addWidget(self.canvas)
+        # ── INITIALIZE THE SEPARATED CHART WIDGET ────────────────
+        self.chart_view = MonteCarloChartView(self)
+        self.chart_view.setMinimumHeight(400) 
+        main_layout.addWidget(self.chart_view)
 
     def create_summary_card(self, title: str, initial_value: str, color: str):
         """Helper function to create styled summary cards."""
@@ -127,32 +109,6 @@ class SimulationPage(QWidget):
         layout.addWidget(title_label)
         layout.addWidget(value_label)
         return card, value_label
-
-    def update_graph(self, time_steps, worst, median, best, background_lines):
-        """Draws the results using the pre-calculated data from the worker."""
-        self.canvas.axes.clear()
-        
-        # Plot the 100 background simulations (transposed back for Matplotlib)
-        self.canvas.axes.plot(time_steps, background_lines.T, color='grey', alpha=0.1, linewidth=1)
-        
-        # Plot the percentiles
-        self.canvas.axes.plot(time_steps, worst, color='#E05252', linestyle='-', linewidth=2, label='Worst (5%)')
-        self.canvas.axes.plot(time_steps, median, color='#4A90E2', linestyle='-', linewidth=2, label='Median (50%)')
-        self.canvas.axes.plot(time_steps, best, color='#2ECC8A', linestyle='-', linewidth=2, label='Best (95%)')
-        
-        # Calculate years for the title
-        simulated_years = len(time_steps) // 252
-        self.canvas.axes.set_title(f"Portfolio Value Projection ({simulated_years} Years)", color='#E8EDF5')
-        
-        self.canvas.axes.set_xlabel('Trading Days', color='#C8D0DC')
-        self.canvas.axes.set_ylabel('Portfolio Value', color='#C8D0DC')
-        self.canvas.axes.legend(facecolor='#111820', edgecolor='#1E2733', labelcolor='#C8D0DC')
-        self.canvas.axes.grid(True, alpha=0.1, color='#C8D0DC')
-        
-        # Y-axis formatting
-        self.canvas.axes.yaxis.set_major_formatter(FuncFormatter(lambda x, p: format(int(x), ',')))
-        
-        self.canvas.draw()
 
     def start_background_preload(self):
         """Triggered automatically when the Dashboard finishes loading."""
@@ -190,8 +146,8 @@ class SimulationPage(QWidget):
         self.median_label.setText(f"{cur} {scenarios['Median (50%)']:,.2f}")
         self.best_label.setText(f"{cur} {scenarios['Best (95%)']:,.2f}")
         
-        # 3. Draw the embedded graph using the pre-calculated lines
-        self.update_graph(time_steps, worst_line, median_line, best_line, background_lines)
+        # 3. Pass the pre-calculated lines straight to the graph for instant rendering
+        self.chart_view.update_graph(time_steps, worst_line, median_line, best_line, background_lines)
         
         # 4. Reset the button
         self.run_btn.setEnabled(True)
@@ -251,7 +207,7 @@ class SimulationPage(QWidget):
         self.best_label.setText(f"{cur} {scenarios['Best (95%)']:,.2f}")
         
         # Pass the pre-calculated lines straight to the graph
-        self.update_graph(time_steps, worst_line, median_line, best_line, background_lines)
+        self.chart_view.update_graph(time_steps, worst_line, median_line, best_line, background_lines)
         
         self.run_btn.setEnabled(True)
         self.run_btn.setText("Run Simulation")

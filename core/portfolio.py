@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import asyncio
 from core.montecarlo import MonteCarloSimulator
-from core.graph import plot_portfolio_montecarlo
 from core.ai_review import get_portfolio_analysis
 from core.utils import read_json, format_json
 
