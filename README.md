@@ -18,6 +18,7 @@ Built with a clean, modular architecture that strictly separates the UI (PySide6
 *   **AI-Powered Insights:** Sends your portfolio composition and simulation results to Google's Gemini API, generating a structured, natural language report with personalized observations and suggestions.
 *   **Optimized Performance:** Employs a multi-threaded architecture to keep the UI responsive. Uses a "FastMathWorker" to instantly recalculate simulations from cached risk metrics without re-fetching historical data.
 *   **Professional UI:** Clean, dark-themed interface inspired by Bloomberg terminals, built with PySide6 and custom QSS styling.
+*   **Interactive Visualizations:** Dynamic Matplotlib charts embedded in the UI display the simulation cone, with background paths and clearly highlighted percentile lines. The simulation graph supports interactive features including zoom clamping, rubber-band selection, and mouse wheel zoom for detailed analysis of projection paths.
 
 ## Project Structure
 
@@ -44,7 +45,7 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 │   ├── montecarlo.py             # MonteCarloSimulator: The mathematical engine. Runs vectorized GBM simulations using NumPy.
 │   ├── ai_review.py              # Handles prompting and communication with the Google Gemini API.
 │   ├── graph.py                  # Standalone plotting functions (used for debugging, as the UI uses its own canvas).
-│   ├── path_manager.py           # Path Manager
+│   ├── path_manager.py           # Centralized path management for assets, configs, and prompts across the application.
 │   └── utils.py                  # Shared utility functions (e.g., reading JSON files).
 │
 ├── tests/                        # UNIT TESTS
@@ -52,6 +53,9 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 │   └── test_montecarlo.py        # Pytest suite for the MonteCarloSimulator, testing edge cases and statistical properties.
 │
 ├── assets/                       # ASSETS
+│   ├── Icon.ico                  # Application icon (Windows .ico format)
+│   ├── Icon.png                  # Application icon (PNG format for cross-platform use)
+│   ├── SetupIcon.ico             # Setup Icon 
 │   └── style.qss                 # Qt Style Sheet for the application's dark theme.
 │
 ├── .github/                      # GITHUB ACTIONS
@@ -136,3 +140,52 @@ The core mathematical logic is thoroughly tested. To run the test suite:
 ```bash
    pytest tests/ -v
 ```
+
+## Building a Standalone Executable
+
+The application can be packaged into a single executable file using PyInstaller, making it easy to distribute and run without a Python environment.
+
+### Prerequisites
+
+- PyInstaller installed (`pip install pyinstaller`)
+
+### Build Instructions
+
+1. **Ensure all dependencies are installed:**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Run PyInstaller with the provided spec file:**
+
+   ```bash
+   pyinstaller build.spec --clean
+   ```
+
+3. **Locate the executable:**
+   
+   - The built executable will be in the dist/ folder.
+   - On Windows: dist/IBKR Portfolio Analyzer.exe
+   - The build includes application icons (Icon.ico, Icon.png, IconSetup.ico) embedded in the executable and used for the window icon.
+     
+### What the Build Includes
+
+- All Python dependencies bundled with the executable
+- Application assets (icons, stylesheets) embedded via the spec file
+- Configuration files (config.json, prompts.json) - these must be present in the same directory as the executable at runtime
+- Optimized build with --clean flag to ensure a fresh compilation
+
+## Post-Build Configuration
+
+**Important**: After building the executable, you must configure the application settings:
+1. Launch the executable - The application will start with default placeholder values.
+2. Navigate to the Settings page - Access the dedicated settings interface
+3. Configure required parameters:
+   - Gemini API Key: Enter your Google AI Studio API key (required for AI Insights feature)
+   - IBKR Connection: Verify host (default: 127.0.0.1), port (default: 4002), and client ID (default: 1)
+   - Simulation Defaults: Adjust risk-free rate and other parameters as needed
+4. Save settings - The configuration is automatically saved to config.json in the executable's directory.
+   
+**Note**: The first-time user must supply their own Gemini API key. The application does not include any pre-configured keys
+
