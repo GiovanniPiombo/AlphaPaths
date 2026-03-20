@@ -4,11 +4,36 @@ TRADING_DAYS_PER_YEAR = 252
 
 class MonteCarloSimulator:
     """
-    Monte Carlo simulator for financial portfolios based on Geometric Brownian Motion.
-    Calculates price evolution and probabilistic scenarios (Worst, Median, Best).
+    Executes Monte Carlo simulations for financial portfolios using Geometric Brownian Motion (GBM).
+
+    This class generates thousands of possible future price paths based on annualized 
+    drift ($\mu$) and volatility ($\sigma$). It utilizes highly optimized, vectorized 
+    NumPy operations to compute the discrete-time GBM solution:
+    $$S_{t+\Delta t} = S_t \exp\left(\left(\mu - \frac{\sigma^2}{2}\right)\Delta t + \sigma \sqrt{\Delta t} Z\right)$$
+    where $Z$ is a standard normal random variable.
+
+    Attributes:
+        capital (float): The initial investment amount (must be > 0).
+        mu (float): Annualized expected return (drift).
+        sigma (float): Annualized portfolio volatility (standard deviation).
+        years (int): The time horizon for the simulation in years.
+        simulations (int): The number of independent price paths to generate.
     """
 
     def __init__(self, capital: float, mu: float, sigma: float, years: int, simulations: int = 10000):
+        """
+        Initializes the simulator and validates the input parameters.
+
+        Args:
+            capital (float): The starting portfolio value.
+            mu (float): The annualized expected return
+            sigma (float): The annualized volatility
+            years (int): The number of years to project forward.
+            simulations (int, optional): The number of paths to generate. Defaults to 10000.
+
+        Raises:
+            ValueError: If capital <= 0, sigma < 0, years < 0, or simulations <= 0.
+        """
         if capital <= 0:
             raise ValueError("Capital must be strictly positive.")
         if sigma < 0:
@@ -25,48 +50,47 @@ class MonteCarloSimulator:
 
     def simulate(self) -> np.ndarray: 
         """
-        Executes the vectorized Monte Carlo simulation with Numpy.
-        Returns a matrix with simulated prices (days x simulations), starting from Day 0.
+        Executes the vectorized Monte Carlo simulation.
+
+        Computes the daily step multiplier matrix using the continuous compounding 
+        formula and calculates the cumulative product to generate complete price paths. 
+        It prepends the initial capital at Day 0 to ensure all paths originate from 
+        the exact starting value.
+
+        Returns:
+            np.ndarray: A 2D array of shape `(years * 252 + 1, simulations)` containing 
+                the simulated portfolio values. Each column represents an independent 
+                simulation path, and each row represents a distinct trading day.
         """
-        # 1) Calculate total steps and delta_t (1 trading day as a fraction of a year)
         total_steps = int(self.years * TRADING_DAYS_PER_YEAR)
         dt = 1.0 / TRADING_DAYS_PER_YEAR  
-        
-        # 2) Drift calculation
         drift = (self.mu - (self.sigma ** 2) / 2) * dt 
-        
-        # 3) Random number matrix with standard normal distribution
         epsilon = np.random.standard_normal(size=(total_steps, self.simulations)) 
-        
-        # 4) Calculate exponent for each day
         shock = self.sigma * np.sqrt(dt) * epsilon 
-        
-        # 5) Transform exponents into daily multipliers
         daily_multiplier = np.exp(drift + shock)
-        
-        # 6) Cumulative product for the future days
         cumulative_multiplier = np.cumprod(daily_multiplier, axis=0)
-        
-        # 7) Add Day 0 (initial capital) as the first row of the multiplier matrix
-        
-        # Create a row of 1s representing the initial multiplier (Day 0)
         day_zero_multiplier = np.ones((1, self.simulations))
-        
-        # Stack Day 0 on top of the future cumulative multipliers
         full_multiplier = np.vstack([day_zero_multiplier, cumulative_multiplier])
-        
-        # Calculate final prices: capital * multipliers
         simulated_prices = self.capital * full_multiplier
         return simulated_prices
 
     def get_scenarios(self, simulated_prices: np.ndarray) -> dict:
         """
-        Extracts the final values for the Best (95th percentile), 
-        Median (50th percentile) and Worst (5th percentile) cases.
+        Extracts key probabilistic outcomes from the simulated price paths.
+
+        Evaluates the final row of the simulation matrix (the last day of the 
+        time horizon) and calculates the exact portfolio values corresponding 
+        to the 5th, 50th, and 95th percentiles.
+
+        Args:
+            simulated_prices (np.ndarray): The 2D array of price paths generated 
+                by the `simulate` method.
+
+        Returns:
+            dict: A dictionary mapping scenario names ("Worst (5%)", "Median (50%)", 
+                "Best (95%)") to their corresponding final portfolio values.
         """
-        # Takes only the last row (end of simulation)
-        final_prices = simulated_prices[-1, :] 
-        
+        final_prices = simulated_prices[-1, :]
         return {
             "Worst (5%)": np.percentile(final_prices, 5), 
             "Median (50%)": np.percentile(final_prices, 50), 

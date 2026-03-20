@@ -16,18 +16,32 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 
 def get_portfolio_analysis(portfolio_data: dict) -> dict:
     """
-    Sends portfolio data to the AI and returns a structured JSON analysis.
+    Requests a structured portfolio analysis from the Gemini AI model.
+
+    Retrieves the system instructions and user prompt templates from the 
+    local configuration, formats them using the provided portfolio metrics, 
+    and sends the request via the Google GenAI SDK. It explicitly configures 
+    the API to return a JSON-formatted response (`application/json`) to ensure 
+    predictable parsing by the application's user interface.
+
+    Args:
+        portfolio_data (dict): A dictionary containing key portfolio metrics 
+            required to populate the prompt template. Expected keys include 
+            'total_value', 'currency', 'risky_weight', 'cash_weight', 'mu', 
+            'sigma', 'worst_case', 'median_case', and 'best_case'.
+
+    Returns:
+        dict: The AI's analytical response parsed into a Python dictionary. 
+            If an API connection error occurs or the model returns invalid JSON, 
+            it safely returns a dictionary containing an "error" key with the 
+            failure details.
     """
     
-    # Extract the user prompt template and system instruction from the prompts data
     template = prompts_data["portfolio_analysis"]["user_prompt_template"]
     system_instruction = prompts_data["portfolio_analysis"]["system_instruction"]
-    
-    # Format the user prompt by injecting the portfolio data into the template
     prompt = template.format(**portfolio_data)
     
     try:
-        # API call leveraging the features of the genai SDK
         response = client.models.generate_content(
             model=MODEL_NAME,
             contents=prompt,
@@ -37,8 +51,6 @@ def get_portfolio_analysis(portfolio_data: dict) -> dict:
                 temperature=0.4
             )
         )
-        
-        # Parse the returned text into a real Python dictionary
         return json.loads(response.text)
         
     except json.JSONDecodeError:
@@ -46,7 +58,6 @@ def get_portfolio_analysis(portfolio_data: dict) -> dict:
     except Exception as e:
         return {"error": f"Connection or API error: {str(e)}"}
     
-# --- Test Block ---
 if __name__ == "__main__":
     # Dummy data to test the module in isolation
     dummy_data = {

@@ -3,11 +3,33 @@ from PySide6.QtCore import Qt, Signal, QTimer
 from workers.ibkr_thread import IBKRWorker
 
 class DashboardPage(QWidget):
-    """The DashboardPage class provides a user interface for displaying the user's IBKR portfolio summary and open positions. It includes a refresh button to fetch the latest data from the IBKR API using a background thread (IBKRWorker) to avoid freezing the UI. The class also emits a custom signal (dashboard_refreshed) when the data fetching and UI update process is complete, allowing other components (like the SimulationPage) to react accordingly, such as starting Monte Carlo simulations with the newly fetched data."""
+    """
+    Main interface for displaying the user's IBKR portfolio overview.
+
+    This page serves as the entry point for financial data. It displays 
+    high-level metrics (Net Liquidation Value, Cash, Daily P&L) and a detailed 
+    table of open positions. It utilizes an `IBKRWorker` to fetch data 
+    asynchronously, ensuring the UI remains responsive during network calls.
+
+    Signals:
+        dashboard_refreshed: Emitted when data fetching completes and the UI 
+            is updated. Used to trigger subsequent actions in other modules 
+            (e.g., pre-loading Monte Carlo simulations).
+
+    Attributes:
+        cached_data (dict): Stores the most recently fetched portfolio data 
+            (currency, weights, positions) for use by other application components.
+        worker (IBKRWorker): The background thread responsible for API calls.
+    """
     dashboard_refreshed = Signal()
 
     def __init__(self):
-        """Initializes the DashboardPage, sets up the UI, and prepares for background data loading."""
+        """
+        Initializes the DashboardPage.
+
+        Sets up the base state, constructs the UI, and schedules an automatic 
+        initial data fetch 100ms after the widget is created.
+        """
         self.cached_data = {}
         super().__init__()
         self.worker = None
@@ -15,7 +37,15 @@ class DashboardPage(QWidget):
         QTimer.singleShot(100, self.start_refresh)
 
     def setup_ui(self):
-        """Sets up the user interface components of the DashboardPage, including summary cards, a refresh button, and a table for open positions."""
+        """
+        Constructs the graphical user interface for the dashboard.
+
+        Builds the vertical main layout containing:
+        1. Header
+        2. Summary cards (NLV, Cash, P&L) via a horizontal layout.
+        3. A control bar with the manual refresh button.
+        4. A formatted `QTableWidget` to display open asset positions.
+        """
         main_layout = QVBoxLayout(self)
         main_layout.setSpacing(20)
         main_layout.setContentsMargins(28, 24, 28, 24)
@@ -71,7 +101,19 @@ class DashboardPage(QWidget):
         main_layout.addWidget(self.positions_table)
 
     def create_summary_card(self, title: str, initial_value: str, value_type: str):
-        """Creates a styled summary card with a title and a value label. The value label's color is determined by the value_type (positive, negative, neutral). Returns the card widget and the value label for later updates."""
+        """
+        Helper method to create styled summary cards for portfolio metrics.
+
+        Args:
+            title (str): The header text of the card (e.g., "DAILY P&L").
+            initial_value (str): The placeholder value text (e.g., "€ 0.00").
+            value_type (str): Determines the semantic color of the text. 
+                Must be one of "positive", "negative", or "neutral".
+
+        Returns:
+            tuple: A (QFrame, QLabel) tuple containing the constructed card 
+                widget and the updatable value label.
+        """
         card = QFrame()
         card.setObjectName("summary_card")
         card.setFrameShape(QFrame.StyledPanel)
@@ -98,7 +140,14 @@ class DashboardPage(QWidget):
     }
 
     def _set_card_value(self, label: QLabel, text: str, value_type: str):
-        """Updates the text and color of a summary card's value label based on the value_type (positive, negative, neutral)."""
+        """
+        Updates the text and dynamic styling of a specific summary card.
+
+        Args:
+            label (QLabel): The target label widget to update.
+            text (str): The formatted currency string to display.
+            value_type (str): Applies the corresponding color from `VALUE_COLORS`.
+        """
         color = self.VALUE_COLORS.get(value_type, "#E8EDF5")
         label.setText(text)
         label.setStyleSheet(
@@ -110,7 +159,13 @@ class DashboardPage(QWidget):
         )
 
     def start_refresh(self):
-        """Starts the process of refreshing IBKR data by creating and running an IBKRWorker thread. It also updates the refresh button's state and text to provide feedback to the user."""
+        """
+        Initiates the asynchronous data fetching process.
+
+        Disables the refresh button to prevent overlapping requests, updates 
+        the button text to show progress, instantiates a new `IBKRWorker`, 
+        connects its signals, and starts the thread.
+        """
         print("\n[UI DEBUG] 1. Button clicked! Starting function...")
         self.refresh_btn.setEnabled(False)
         self.refresh_btn.setText("Connecting...")
@@ -125,7 +180,17 @@ class DashboardPage(QWidget):
         self.worker.start()
 
     def on_data_fetched(self, data):
-        """Handles the data received from the IBKRWorker thread, updates the UI with the new portfolio summary and positions, and emits a signal to notify that the dashboard has been refreshed and simulations can start."""
+        """
+        Callback triggered when the IBKRWorker successfully returns data.
+
+        Parses the incoming dictionary to update the summary cards (applying 
+        positive/negative styling to P&L) and populates the positions table. 
+        Finally, caches the data and emits the `dashboard_refreshed` signal.
+
+        Args:
+            data (dict): Parsed portfolio data including 'currency', 'nlv', 
+                'cash', 'pnl', 'risky_weight', 'cash_weight', and 'positions'.
+        """
         print("[UI DEBUG] 5. Data received from thread! Updating UI...")
 
         cur = data['currency']
@@ -158,7 +223,15 @@ class DashboardPage(QWidget):
         self.dashboard_refreshed.emit()
 
     def on_error(self, error_msg):
-        """Handles errors emitted by the IBKRWorker thread, updates the refresh button's state and text, and shows a critical message box to inform the user about the error."""
+        """
+        Callback triggered if the IBKRWorker encounters an exception.
+
+        Restores the UI state (re-enabling the refresh button) and presents 
+        a critical error dialog to the user with the failure details.
+
+        Args:
+            error_msg (str): The formatted error string from the worker thread.
+        """
         print(f"[UI DEBUG] Error received: {error_msg}")
         self.refresh_btn.setEnabled(True)
         self.refresh_btn.setText("Refresh IBKR Data")

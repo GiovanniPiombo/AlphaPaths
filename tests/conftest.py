@@ -1,4 +1,3 @@
-# root/tests/conftest.py
 import sys
 import os
 import pytest

@@ -4,30 +4,45 @@ from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import Qt, QPointF, QTimer
 
 class MonteCarloChartView(QChartView):
-    """Custom QChartView for displaying Monte Carlo simulations."""
+    """
+    A custom PySide6 QChartView specialized for rendering Monte Carlo simulations.
+
+    This view handles the visualization of thousands of background simulation paths 
+    alongside highlighted percentile paths (Worst, Median, Best). It implements 
+    a custom dark theme, anti-aliased rendering, and advanced interaction logic 
+    (zoom clamping, rubber-band selection, and wheel zoom) while preventing the 
+    user from scrolling outside the calculated data boundaries.
+
+    Attributes:
+        chart (QChart): The underlying chart object being rendered.
+        axis_x (QValueAxis): The dynamic X-axis representing trading days.
+        axis_y (QValueAxis): The dynamic Y-axis representing portfolio value.
+        orig_x_min, orig_x_max (float): Hard boundaries for the X-axis to constrain zooming.
+        orig_y_min, orig_y_max (float): Hard boundaries for the Y-axis to constrain zooming.
+    """
     def __init__(self, parent=None):
+        """
+        Initializes the custom chart view, applies styling, and enables interactions.
+
+        Args:
+            parent (QWidget, optional): The parent widget in the Qt hierarchy. 
+                Defaults to None.
+        """
         super().__init__(parent)
         
         self.chart = QChart()
         self.setChart(self.chart)
         
-        # Apply dark theme
         self.chart.setBackgroundBrush(QColor('#0D1117'))
         self.chart.setTitleBrush(QColor('#E8EDF5'))
         self.chart.legend().setLabelColor(QColor('#C8D0DC'))
         self.chart.legend().setAlignment(Qt.AlignBottom)
-        
-        # Remove unnecessary chart margins
         self.chart.layout().setContentsMargins(0, 0, 0, 0)
         self.chart.setBackgroundRoundness(0)
-        
-        # Antialiasing for smoother lines
-        self.setRenderHint(QPainter.Antialiasing)
 
-        # Enable click-and-drag selection to zoom
+        self.setRenderHint(QPainter.Antialiasing)
         self.setRubberBand(QChartView.RectangleRubberBand)
         
-        # Variables to store our axes and hard limits safely
         self.axis_x = None
         self.axis_y = None
         self.orig_x_min = 0.0
@@ -36,14 +51,27 @@ class MonteCarloChartView(QChartView):
         self.orig_y_max = 0.0
 
     def update_graph(self, time_steps, worst, median, best, background_lines):
-        """Updates the graph with the newly calculated data."""
+        """
+        Clears the existing chart and redraws all simulation data.
+
+        This method dynamically recalculates the chart boundaries based on the 
+        new data, draws a sample of semi-transparent background lines, and overlays 
+        the main percentile paths with distinct colors. It automatically updates 
+        the chart title to reflect the simulated time horizon.
+
+        Args:
+            time_steps (list or np.ndarray): X-axis values (usually 0 to Total Days).
+            worst (list or np.ndarray): Y-values for the 5th percentile path.
+            median (list or np.ndarray): Y-values for the 50th percentile path.
+            best (list or np.ndarray): Y-values for the 95th percentile path.
+            background_lines (np.ndarray): A 2D array containing the raw, individual 
+                simulation paths to be drawn faintly in the background.
+        """
         self.chart.removeAllSeries()
         
-        # Remove old axes
         for axis in self.chart.axes():
             self.chart.removeAxis(axis)
 
-        # Save boundaries securely inside the class instance
         self.orig_x_min = 0.0
         self.orig_x_max = float(time_steps[-1])
         
@@ -53,7 +81,6 @@ class MonteCarloChartView(QChartView):
         self.orig_y_min = 0.0 if min_val < 0 else min_val 
         self.orig_y_max = max_val
 
-        # --- Background Lines ---
         num_bg_lines = min(100, background_lines.shape[0] if len(background_lines.shape) > 1 else 0)
         
         bg_pen = QPen(QColor(128, 128, 128, 20))
@@ -66,12 +93,10 @@ class MonteCarloChartView(QChartView):
             series.append(points)
             self.chart.addSeries(series)
 
-        # --- Main Lines (Worst, Median, Best) ---
         self._add_main_series(time_steps, worst, "Worst (5%)", "#E05252")
         self._add_main_series(time_steps, median, "Median (50%)", "#4A90E2")
         self._add_main_series(time_steps, best, "Best (95%)", "#2ECC8A")
 
-        # --- Axes Configuration ---
         self.axis_x = QValueAxis()
         self.axis_x.setTitleText("Trading Days")
         self.axis_x.setLabelFormat("%i")
@@ -99,7 +124,15 @@ class MonteCarloChartView(QChartView):
         self.chart.setTitle(f"Portfolio Value Projection ({simulated_years} Years)")
 
     def _add_main_series(self, x_data, y_data, name, hex_color):
-        """Helper to add main series."""
+        """
+        Helper method to create and style a main percentile line series.
+
+        Args:
+            x_data (list or np.ndarray): The X-axis coordinates.
+            y_data (list or np.ndarray): The Y-axis coordinates.
+            name (str): The label for the series (displays in the legend).
+            hex_color (str): The hex code for the line's color (e.g., "#E05252").
+        """
         series = QLineSeries()
         series.setName(name)
         
@@ -112,7 +145,12 @@ class MonteCarloChartView(QChartView):
         self.chart.addSeries(series)
 
     def _clamp_axes(self):
-        """Forces the current view to stay within original data boundaries."""
+        """
+        Forces the chart's current viewport to remain within the original data boundaries.
+
+        This prevents the user from zooming out infinitely or panning into 
+        empty/negative space where no simulation data exists.
+        """
         if not self.axis_x or not self.axis_y:
             return
 
@@ -129,36 +167,59 @@ class MonteCarloChartView(QChartView):
             self.axis_y.setMax(self.orig_y_max)
 
     def wheelEvent(self, event):
-        """Zoom in/out with the scroll wheel and enforce limits using a delay."""
+        """
+        Overrides the default wheel event to implement boundary-constrained zooming.
+
+        Uses the mouse wheel delta to trigger `zoomIn` or `zoomOut`. A QTimer 
+        is utilized to defer the execution of `_clamp_axes`, ensuring Qt's 
+        internal zooming logic completes before boundaries are enforced.
+
+        Args:
+            event (QWheelEvent): The Qt mouse wheel event payload.
+        """
         if event.angleDelta().y() > 0:
             self.chart.zoomIn()
         else:
             self.chart.zoomOut()
             
-        # This ensures Qt is completely finished with its internal zoom logic first.
         QTimer.singleShot(10, self._clamp_axes)
         event.accept() 
 
     def mousePressEvent(self, event):
-        """Record the start position to differentiate between a click and a drag."""
+        """
+        Overrides the default press event to track initial click coordinates.
+
+        Records the click position to differentiate between a simple click (reset zoom) 
+        and a drag action (rubber-band zoom). Suppresses default right-click behaviors.
+
+        Args:
+            event (QMouseEvent): The Qt mouse press event payload.
+        """
         self._click_pos = event.pos()
         
-        # Shield base Qt from right-click cursed behavior, but let left-click through
         if event.button() == Qt.RightButton:
             event.accept() 
         else:
             super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
-        """Decide whether to reset the zoom (click) or clamp the zoom (drag)."""
+        """
+        Overrides the default release event to trigger custom interaction logic.
+
+        Determines if the action was a simple click (Manhattan length < 5 pixels) 
+        or a drag. If it was a click, the zoom is reset. If it was a left-drag, 
+        it allows the rubber-band zoom to finish and schedules a boundary clamp.
+
+        Args:
+            event (QMouseEvent): The Qt mouse release event payload.
+        """
         if event.button() == Qt.LeftButton:
             super().mouseReleaseEvent(event)
 
         is_click = False
         if hasattr(self, '_click_pos') and self._click_pos is not None:
-            # Calculate pixel distance between press and release
             delta = event.pos() - self._click_pos
-            if delta.manhattanLength() < 5:  # Less than 5 pixels = a click
+            if delta.manhattanLength() < 5:
                 is_click = True
 
         if is_click:
@@ -166,14 +227,14 @@ class MonteCarloChartView(QChartView):
             event.accept()
         else:
             if event.button() == Qt.LeftButton:
-                # Left drag = Apply the delayed clamp after the zoom
                 QTimer.singleShot(10, self._clamp_axes)
             elif event.button() == Qt.RightButton:
-                # Right drag = Ignore entirely
                 event.accept()
     
     def reset_zoom(self):
-        """Manually resets the chart to the exact original boundaries."""
+        """
+        Programmatically restores the chart axes to their original, maximum boundaries.
+        """
         if self.axis_x and self.axis_y:
             self.axis_x.setRange(self.orig_x_min, self.orig_x_max)
             self.axis_y.setRange(self.orig_y_min, self.orig_y_max)

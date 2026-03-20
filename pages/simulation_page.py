@@ -1,22 +1,34 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QSpinBox, QComboBox, QFrame, QMessageBox
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
-from matplotlib.ticker import FuncFormatter
 from PySide6.QtCore import Qt, Signal
 from workers.simulation_thread import SimulationWorker, FastMathWorker
 from core.utils import read_json
 from components.chart_widget import MonteCarloChartView
 
 class SimulationPage(QWidget):
-    """The SimulationPage class provides a user interface for running Monte Carlo simulations on the user's portfolio. It includes controls for selecting the number of years and simulations, summary cards for displaying key metrics, and an embedded Matplotlib graph to visualize the simulation results. The class uses background threads to perform calculations without freezing the UI, and it caches certain variables to optimize performance for subsequent runs."""
+    """
+    A page component that performs and visualizes Monte Carlo simulations.
+
+    Signals:
+        simulation_finished (dict): Emitted when a simulation concludes. 
+            Contains 'total_value', 'mu', 'sigma', and percentile results.
+
+    Attributes:
+        cached_mu (float): The mean return calculated from historical data.
+        cached_sigma (float): The volatility calculated from historical data.
+        cached_capital (float): The initial investment amount to simulate.
+    """
     simulation_finished = Signal(dict)
     def __init__(self):
-        """Initializes the SimulationPage, sets up the UI, and prepares for background data loading."""
+        """
+        Initializes the simulation page and prepares the internal cache.
+        
+        Sets the cache variables to None before they are populated by the 
+        background thread, preventing accidental calculations without 
+        valid historical data.
+        """
         super().__init__()
         
-        # --- CACHE VARIABLES FOR OPTIMIZATION ---
-        # These are populated once by the background thread, 
-        # allowing instant recalculations later.
+        # ── CACHE VARIABLES FOR OPTIMIZATION ─────────────────
         self.cached_mu = None
         self.cached_sigma = None
         self.cached_capital = None
@@ -24,7 +36,13 @@ class SimulationPage(QWidget):
         self.setup_ui()
 
     def setup_ui(self):
-        """Sets up the user interface components of the SimulationPage, including controls, summary cards, and the Matplotlib canvas."""
+        """
+        Constructs the layout, control bar, summary cards, and chart view.
+        
+        Configures user inputs for simulation duration (years) and 
+        iteration count, while setting up the dynamic summary cards 
+        for Worst, Median, and Best case scenarios.
+        """
         main_layout = QVBoxLayout(self)
         main_layout.setSpacing(20)
         main_layout.setContentsMargins(28, 24, 28, 24)
@@ -38,27 +56,26 @@ class SimulationPage(QWidget):
         controls_layout = QHBoxLayout()
         controls_layout.setSpacing(15)
 
-        # Years Selector
+        # ── Years Selector ───────────────────────────────────
         lbl_years = QLabel("Years:")
         self.spin_years = QSpinBox()
         self.spin_years.setRange(1, 30)
-        # Read default from config:
         self.spin_years.setValue(read_json("config.json", "DEFAULT_YEARS") or 5)
         
-        # Simulations Selector
+        # ── Simulations Selector ─────────────────────────────
         lbl_sims = QLabel("Simulations:")
         self.combo_sims = QComboBox()
         self.combo_sims.addItems(["1000", "10000", "50000", "100000"])
-        # Read default from config:
         default_sims = str(read_json("config.json", "DEFAULT_SIMS") or "10000")
         self.combo_sims.setCurrentText(default_sims)
 
-        # Run Button
+        # ── Run Button ───────────────────────────────────────
         self.run_btn = QPushButton("Run Simulation")
         self.run_btn.setObjectName("primary_btn")
         self.run_btn.setMinimumHeight(38)
         self.run_btn.clicked.connect(self.on_run_clicked)
 
+        # ── Control Layout ───────────────────────────────────
         controls_layout.addWidget(lbl_years)
         controls_layout.addWidget(self.spin_years)
         controls_layout.addWidget(lbl_sims)
@@ -88,7 +105,19 @@ class SimulationPage(QWidget):
         main_layout.addWidget(self.chart_view)
 
     def create_summary_card(self, title: str, initial_value: str, color: str):
-        """Helper function to create styled summary cards."""
+        """
+        Helper function to create summary cards.
+
+        Args:
+            title (str): The card's header.
+            initial_value (str): The starting value to display.
+            color (str): The hex color code for the value text.
+
+        Returns:
+            tuple: A tuple containing (card_widget, value_label) where:
+                - card_widget (QFrame): The visual container of the card.
+                - value_label (QLabel): The updatable label holding the results.
+        """
         card = QFrame()
         card.setObjectName("summary_card")
         layout = QVBoxLayout(card)
@@ -111,8 +140,13 @@ class SimulationPage(QWidget):
         return card, value_label
 
     def start_background_preload(self):
-        """Triggered automatically when the Dashboard finishes loading."""
-        # If it's already running, don't start it again
+        """
+        Starts the data loading and the initial background simulation.
+
+        This is typically triggered automatically when the Dashboard finishes 
+        loading, using a `SimulationWorker` to prevent freezing the UI 
+        during the initial fetch of historical data.
+        """
         if not self.run_btn.isEnabled():
             return
             
@@ -120,13 +154,11 @@ class SimulationPage(QWidget):
         self.run_btn.setEnabled(False)
         self.run_btn.setText("Preloading in background...")
         
-        # Use the current values in the UI (e.g., 5 years, 10,000 sims)
         years = self.spin_years.value()
         simulations = int(self.combo_sims.currentText())
         
         self.worker = SimulationWorker(years, simulations)
         
-        # Update the button text to show what's happening in the background
         self.worker.progress_update.connect(lambda msg: self.run_btn.setText(f"Background: {msg}"))
         self.worker.data_fetched.connect(self.on_simulation_complete)
         self.worker.error_occurred.connect(self.on_simulation_error)
@@ -134,22 +166,39 @@ class SimulationPage(QWidget):
         self.worker.start()
 
     def on_simulation_complete(self, scenarios, mu, sigma, capital, time_steps, worst_line, median_line, best_line, background_lines):
-        """Triggered when the background thread successfully finishes the initial load."""
-        # 1. Store the metrics in the cache!
+        """
+        Callback executed upon successful completion of the SimulationWorker.
+
+        Saves the fundamental parameters to the class cache, updates the 
+        monetary values in the summary cards, and passes the paths to the 
+        chart. Finally, it emits the `simulation_finished` signal.
+
+        Args:
+            scenarios (dict): Dictionary with the calculated percentile results.
+            mu (float): Annualized mean return (drift).
+            sigma (float): Annualized volatility.
+            capital (float): Initial capital value.
+            time_steps (np.ndarray): X-axis for the chart (months or years).
+            worst_line (np.ndarray): 5th percentile path.
+            median_line (np.ndarray): 50th percentile path.
+            best_line (np.ndarray): 95th percentile path.
+            background_lines (list): Sample of individual paths for the background.
+        """
+        # ── Store Metrics ────────────────────────────────────────
         self.cached_mu = mu
         self.cached_sigma = sigma
         self.cached_capital = capital
         
-        # 2. Update the Summary Cards
+        # ── Update Summary Cards ─────────────────────────────────
         cur = "€"
         self.worst_label.setText(f"{cur} {scenarios['Worst (5%)']:,.2f}")
         self.median_label.setText(f"{cur} {scenarios['Median (50%)']:,.2f}")
         self.best_label.setText(f"{cur} {scenarios['Best (95%)']:,.2f}")
         
-        # 3. Pass the pre-calculated lines straight to the graph for instant rendering
+        # ── Pass the pre-calculated lines to the graph ───────────
         self.chart_view.update_graph(time_steps, worst_line, median_line, best_line, background_lines)
         
-        # 4. Reset the button
+        # ── Reset the button ─────────────────────────────────────
         self.run_btn.setEnabled(True)
         self.run_btn.setText("Run Simulation")
 
@@ -164,18 +213,33 @@ class SimulationPage(QWidget):
         self.simulation_finished.emit(sim_data)
 
     def on_simulation_error(self, error_msg):
-        """Triggered if something breaks in the thread."""
+        """
+        Handles exceptions raised by the background threads.
+
+        Re-enables the UI controls and displays a critical dialog 
+        box to the user with the error details.
+
+        Args:
+            error_msg (str): The error message returned by the worker.
+        """
         self.run_btn.setEnabled(True)
         self.run_btn.setText("Run Simulation")
         QMessageBox.critical(self, "Simulation Error", f"An error occurred:\n{error_msg}")
 
     def on_run_clicked(self):
-        """Uses the FastMathWorker to calculate in the background without freezing the UI."""
+        """
+        Handles the click event on the "Run Simulation" button.
+
+        Checks that the base data is already cached; if present, it starts 
+        a `FastMathWorker` to execute new simulations based on the user's 
+        chosen parameters (years and iterations) without re-downloading 
+        the financial data.
+        """
         if self.cached_capital is None:
             self.run_btn.setText("Still downloading background data...")
             return
             
-        # UI updates
+        # ── UI Updates ───────────────────────────────────────────
         self.run_btn.setEnabled(False)
         self.run_btn.setText("Calculating scenarios...")
         
@@ -184,7 +248,7 @@ class SimulationPage(QWidget):
         
         print(f"[UI DEBUG] Starting FastMathWorker: {years}Y, {simulations} sims...")
         
-        # Launch the lightweight thread
+        # ── Launch the thread ────────────────────────────────────
         self.fast_worker = FastMathWorker(
             capital=self.cached_capital,
             mu=self.cached_mu,
@@ -193,20 +257,33 @@ class SimulationPage(QWidget):
             simulations=simulations
         )
         
-        # Connect the signals
+        # ── Connect the signals ──────────────────────────────────
         self.fast_worker.data_calculated.connect(self.on_fast_math_complete)
         self.fast_worker.error_occurred.connect(self.on_simulation_error)
         
         self.fast_worker.start()
 
     def on_fast_math_complete(self, scenarios, time_steps, worst_line, median_line, best_line, background_lines):
-        """Receives the results from the FastMathWorker and updates the UI."""
+        """
+        Callback executed upon completion of the FastMathWorker calculations.
+
+        Updates the UI with the newly calculated scenarios and updates the chart
+        using the `mu`, `sigma`, and `capital` parameters already in the cache.
+        Emits the newly updated data via the `simulation_finished` signal.
+
+        Args:
+            scenarios (dict): The newly calculated percentile results.
+            time_steps (np.ndarray): Updated X-axis for the chart.
+            worst_line (np.ndarray): New 5th percentile path.
+            median_line (np.ndarray): New 50th percentile path.
+            best_line (np.ndarray): New 95th percentile path.
+            background_lines (list): New background paths.
+        """
         cur = "€"
         self.worst_label.setText(f"{cur} {scenarios['Worst (5%)']:,.2f}")
         self.median_label.setText(f"{cur} {scenarios['Median (50%)']:,.2f}")
         self.best_label.setText(f"{cur} {scenarios['Best (95%)']:,.2f}")
-        
-        # Pass the pre-calculated lines straight to the graph
+    
         self.chart_view.update_graph(time_steps, worst_line, median_line, best_line, background_lines)
         
         self.run_btn.setEnabled(True)

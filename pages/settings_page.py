@@ -3,14 +3,36 @@ from PySide6.QtCore import Qt
 from core.utils import read_json, write_json
 
 class SettingsPage(QWidget):
-    """The SettingsPage provides a user interface for configuring application settings, including Gemini API credentials, Monte Carlo defaults, and IBKR connection parameters. It allows users to input and save their preferences, which are stored in the config.json file. The page is structured with clear sections for different categories of settings and includes validation and feedback mechanisms for saving changes."""
+    """
+    User interface component for configuring global application settings.
+
+    This page manages user preferences including Gemini API credentials, 
+    Monte Carlo simulation defaults, and Interactive Brokers (IBKR) connection 
+    parameters. It handles loading existing configurations from `config.json`, 
+    displaying them in categorized form fields, and saving user modifications 
+    back to the local file system.
+    """
+
     def __init__(self):
+        """
+        Initializes the SettingsPage.
+
+        Calls the UI setup routine and immediately populates the fields 
+        by loading the existing configuration from disk.
+        """
         super().__init__()
         self.setup_ui()
         self.load_settings()
 
     def setup_ui(self):
-        """Sets up the user interface components of the SettingsPage, including input fields for Gemini API configuration, Monte Carlo defaults, and IBKR connection settings. The layout is organized with headers and a form layout for better readability."""
+        """
+        Constructs and arranges the UI elements using a QFormLayout.
+
+        Organizes input fields into three distinct semantic sections:
+        1. AI & MATH CONFIGURATION (API keys, models, language, risk-free rate)
+        2. MONTE CARLO DEFAULTS (Years, simulation counts)
+        3. IBKR CONNECTION SETTINGS (Host, port, client ID, timeout)
+        """
         main_layout = QVBoxLayout(self)
         main_layout.setSpacing(20)
         main_layout.setContentsMargins(28, 24, 28, 24)
@@ -23,7 +45,7 @@ class SettingsPage(QWidget):
         form_layout.setSpacing(15)
         form_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
-        # --- AI & MATH CONFIGURATION ---
+        # ── AI & Math Configuration ────────────────────────────────────
         ai_section = QLabel("AI & MATH CONFIGURATION")
         ai_section.setObjectName("section_label")
         form_layout.addRow(ai_section)
@@ -47,7 +69,7 @@ class SettingsPage(QWidget):
         form_layout.addRow(QLabel("AI Output Language:"), self.language_input)
         form_layout.addRow(QLabel("Risk-Free Rate:"), self.risk_free_input)
 
-        # --- MONTE CARLO DEFAULTS ---
+        # ─── Monte Carlo Defaults ──────────────────────────────────────
         mc_section = QLabel("MONTE CARLO DEFAULTS")
         mc_section.setObjectName("section_label")
         mc_section.setStyleSheet("margin-top: 10px;")
@@ -62,7 +84,7 @@ class SettingsPage(QWidget):
         form_layout.addRow(QLabel("Default Years:"), self.mc_years_input)
         form_layout.addRow(QLabel("Default Simulations:"), self.mc_sims_input)
 
-        # --- BROKER SETTINGS ---
+        # ─── Broker Settings ───────────────────────────────────────────
         broker_section = QLabel("IBKR CONNECTION SETTINGS")
         broker_section.setObjectName("section_label")
         broker_section.setStyleSheet("margin-top: 10px;") 
@@ -100,7 +122,13 @@ class SettingsPage(QWidget):
         main_layout.addStretch()
 
     def load_settings(self):
-        """Loads settings from the config.json file and populates the input fields with the current values. If the config file or specific keys are missing, it uses safe defaults to ensure the application remains functional."""
+        """
+        Reads `config.json` and populates the UI input fields.
+
+        If the configuration file is missing, corrupted, or missing specific 
+        keys, it automatically falls back to safe default values to ensure 
+        the UI renders without throwing exceptions.
+        """
         config = read_json("config.json")
         if config:
             self.api_key_input.setText(config.get("GEMINI_API_KEY", ""))
@@ -117,7 +145,14 @@ class SettingsPage(QWidget):
             self.ibkr_timeout_input.setValue(config.get("IBKR_TIMEOUT", 5.0))
 
     def save_settings(self):
-        """Collects the current values from the input fields and saves them to the config.json file. It provides user feedback on whether the save operation was successful and prompts for an application restart to apply changes."""
+        """
+        Gathers user inputs, formats them, and writes them to `config.json`.
+
+        Converts UI-specific formatting (like percentage values from the 
+        risk-free rate spinbox) back into standard decimal formats for storage. 
+        Upon successful write, it prompts the user with a dialog recommending 
+        an application restart to apply changes globally.
+        """
         config = read_json("config.json")
         if not isinstance(config, dict):
             config = {}

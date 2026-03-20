@@ -10,7 +10,20 @@ from pages.ai_page import AIPage
 from core.utils import read_json
 
 class MainWindow(QMainWindow):
-    """The MainWindow class is the central hub of the application, managing the overall layout, navigation, and data flow between the different pages (Dashboard, Simulation, AI Insights). It initializes the sidebar for navigation and a stacked widget to hold the pages. The class also handles signals emitted by the pages to coordinate actions such as starting simulations after fetching IBKR data and updating the AI page with new data from the simulation results."""
+    """
+    The primary application window for the IBKR Portfolio Analyzer.
+
+    This class manages the high-level application state, handles navigation 
+    between different analysis modules, and acts as a central data hub 
+    for portfolio information.
+
+    Attributes:
+        shared_portfolio_data (dict): A centralized cache storing portfolio 
+            metrics, tickers, and prices accessible by all child pages.
+        sidebar (QWidget): The navigation container on the left.
+        stacked_widget (QStackedWidget): The main content area that swaps 
+            between Dashboard, Simulation, AI, and Settings views.
+    """
     def __init__(self):
         super().__init__()
         self.setWindowTitle("IBKR Portfolio Analyzer")
@@ -23,8 +36,10 @@ class MainWindow(QMainWindow):
         self.connect_signals()
 
     def setup_ui(self):
-        """Sets up the main user interface, including the sidebar for navigation and the stacked widget for displaying different pages."""
-        # Main Widget and Layout
+        """
+        Initializes the user interface components, including the sidebar and the stacked widget for page navigation.
+        """
+        # ── Main Layout ─────────────────────────────────────────────
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QHBoxLayout(central_widget)
@@ -39,14 +54,14 @@ class MainWindow(QMainWindow):
         sidebar_layout.setContentsMargins(0, 20, 0, 20)
         sidebar_layout.setSpacing(5)
 
-        # Logo / Title
+        # ── Logo / Title ───────────────────────────────────────
         logo_label = QLabel("IBKR ANALYZER")
         logo_label.setObjectName("logo_label")
         logo_label.setAlignment(Qt.AlignCenter)
         sidebar_layout.addWidget(logo_label)
         sidebar_layout.addSpacing(20)
 
-        # Navigation Buttons
+        # ── Navigation Buttons ─────────────────────────────────
         self.btn_dashboard = QPushButton("Dashboard")
         self.btn_dashboard.setCheckable(True)
         self.btn_dashboard.setChecked(True)
@@ -85,17 +100,14 @@ class MainWindow(QMainWindow):
 
     def connect_signals(self):
         """Connects signals from the sidebar buttons and the pages to their respective handlers for navigation and data flow coordination."""
-        # Sidebar Navigation
+        # ── Sidebar Navigation Signals ─────────────────────────────
         self.btn_dashboard.clicked.connect(lambda: self.switch_page(0, self.btn_dashboard))
         self.btn_simulation.clicked.connect(lambda: self.switch_page(1, self.btn_simulation))
         self.btn_ai.clicked.connect(lambda: self.switch_page(2, self.btn_ai))
         self.btn_settings.clicked.connect(lambda: self.switch_page(3, self.btn_settings))
 
-        # Core Application Flow
-        # 1. When Dashboard finishes, automatically trigger Simulation background load
+        # ── Navigation and Data Flow Signals from Pages ─────────────────────────────
         self.dashboard_page.dashboard_refreshed.connect(self.on_dashboard_ready)
-
-        # 2. When Simulation finishes, update the AI Page with the combined data
         self.simulation_page.simulation_finished.connect(self.on_simulation_ready)
 
     def switch_page(self, index, active_button):
@@ -110,15 +122,15 @@ class MainWindow(QMainWindow):
 
     def on_dashboard_ready(self):
         """Called when IBKR data is successfully loaded in the dashboard."""
-        
-        # Save base data (currency, weights) from Dashboard
         self.shared_portfolio_data.update(self.dashboard_page.cached_data)
-        
-        # Trigger the Monte Carlo preload
         self.simulation_page.start_background_preload()
 
     def on_simulation_ready(self, sim_data: dict):
-        """Called when Monte Carlo math finishes."""
+        """
+        Called when Monte Carlo math finishes.
+
+        param: sim_data: A dictionary containing the results of the Monte Carlo simulation, including mu, sigma, and scenario outcomes.
+        """
         # Merge the simulation math (mu, sigma, scenarios) into our shared dictionary
         self.shared_portfolio_data.update(sim_data)
         
@@ -130,7 +142,6 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    
     # Load Stylesheet
     try:
         with open("style.qss", "r") as f:
