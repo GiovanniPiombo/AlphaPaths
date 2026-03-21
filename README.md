@@ -10,6 +10,12 @@ Desktop application for advanced risk analysis and Monte Carlo simulation of fin
 
 Built with a clean, modular architecture that strictly separates the UI (PySide6), background threads (QThread), and pure business logic, ensuring a responsive user experience even during complex calculations.
 
+## Preview
+
+<p align="center">
+  <img src="assets/app_demo.gif" alt="IBKR Portfolio Analyzer App Demo" width="800">
+</p>
+
 ## Key Features
 
 *   **Direct IBKR Integration:** Automatically downloads real portfolio data (Net Liquidation Value, Cash, Positions, Daily P&L) via the `ib_async` library. Supports multi-currency portfolios with automatic FX conversion.
