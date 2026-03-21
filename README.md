@@ -23,7 +23,7 @@ Built with a clean, modular architecture that strictly separates the UI (PySide6
 *   **AI-Powered Insights:** Sends your portfolio composition and simulation results to Google's Gemini API, generating a structured, natural language report with personalized observations and suggestions.
 *   **Optimized Performance:** Employs a multi-threaded architecture to keep the UI responsive. Uses a "FastMathWorker" to instantly recalculate simulations from cached risk metrics without re-fetching historical data.
 *   **Professional UI:** Clean, dark-themed interface inspired by Bloomberg terminals, built with PySide6 and custom QSS styling.
-*   **Interactive Visualizations:** Dynamic Matplotlib charts embedded in the UI display the simulation cone, with background paths and clearly highlighted percentile lines. The simulation graph supports interactive features including zoom clamping, rubber-band selection, and mouse wheel zoom for detailed analysis of projection paths.
+*   **Interactive Visualizations:** Dynamic Qcharts embedded in the UI display the simulation cone, with background paths and clearly highlighted percentile lines. The simulation graph supports interactive features including zoom clamping, rubber-band selection, and mouse wheel zoom for detailed analysis of projection paths.
 
 ## Project Structure
 
@@ -63,6 +63,9 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 │   ├── Icon.png                  # Application icon (PNG format for cross-platform use)
 │   ├── SetupIcon.ico             # Setup Icon 
 │   └── style.qss                 # Qt Style Sheet for the application's dark theme.
+
+├── components/                   # Components
+│   └── chart_widget              # Montecarlo Simulation QChart
 │
 ├── .github/                      # GITHUB ACTIONS
 │   └── workflows/
