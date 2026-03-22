@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDoubleSpinBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QComboBox
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDoubleSpinBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QComboBox, QScrollArea
 from PySide6.QtCore import Qt
 from core.utils import read_json, write_json
 from core.path_manager import PathManager
@@ -27,10 +27,11 @@ class SettingsPage(QWidget):
 
     def setup_ui(self):
         """
-        Constructs and arranges the UI elements using a QFormLayout.
+        Constructs and arranges the UI elements using a QFormLayout wrapped inside a QScrollArea.
 
-        Organizes input fields into three distinct semantic sections:
-        1. AI & MATH CONFIGURATION (API keys, models, language, risk-free rate)
+        Organizes input fields into three distinct semantic sections that can be scrolled, 
+        while keeping the primary action buttons (Save Settings) fixed at the bottom:
+        1. AI & MATH CONFIGURATION (API keys, models, language, risk-free rate, pacing limit)
         2. MONTE CARLO DEFAULTS (Years, simulation counts)
         3. IBKR CONNECTION SETTINGS (Host, port, client ID, timeout)
         """
@@ -42,8 +43,17 @@ class SettingsPage(QWidget):
         header_label.setObjectName("page_header")
         main_layout.addWidget(header_label)
 
-        form_layout = QFormLayout()
+        # ─── SETUP SCROLL AREA ─────────────────────────────────────────
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True) # CRITICAL: Allows internal widget to expand
+        scroll_area.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+
+        scroll_content = QWidget()
+        scroll_content.setStyleSheet("background: transparent;")
+
+        form_layout = QFormLayout(scroll_content)
         form_layout.setSpacing(15)
+        form_layout.setContentsMargins(0, 0, 15, 0)
         form_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         # ── AI & Math Configuration ────────────────────────────────────
@@ -119,7 +129,8 @@ class SettingsPage(QWidget):
         form_layout.addRow(QLabel("Client ID:"), self.ibkr_client_id_input)
         form_layout.addRow(QLabel("Data Timeout:"), self.ibkr_timeout_input)
 
-        main_layout.addLayout(form_layout)
+        scroll_area.setWidget(scroll_content)
+        main_layout.addWidget(scroll_area)
 
         # ── CONTROLS ─────────────────────────────────────────
         btn_layout = QHBoxLayout()
@@ -131,7 +142,6 @@ class SettingsPage(QWidget):
         btn_layout.addStretch()
         btn_layout.addWidget(self.save_btn)
         main_layout.addLayout(btn_layout)
-        main_layout.addStretch()
 
     def load_settings(self):
         """
