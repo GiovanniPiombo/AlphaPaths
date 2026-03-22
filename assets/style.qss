@@ -194,7 +194,8 @@ QTableWidget {
 }
 
 QTableWidget::item {
-    padding: 8px 12px;
+    padding: 4px 12px;
+    min-height: 36px;
     border: none;
     color: #C8D0DC;
 }
@@ -518,4 +519,34 @@ QLabel#wip_label {
     font-weight: 700;
     color: #1E2733;
     qproperty-alignment: AlignCenter;
+}
+
+/* ── CHECKBOX & TABLE INDICATORS ──────────────────────────── */
+
+QCheckBox {
+    color: #C8D0DC;
+    spacing: 8px;
+    font-size: 13px;
+}
+
+/* Applica lo stile sia alle checkbox standard che a quelle dentro le tabelle */
+QCheckBox::indicator,
+QTableWidget::indicator {
+    width: 14px;
+    height: 14px;
+    border: 1px solid #2A3A4A;
+    border-radius: 3px;
+    background-color: #111820;
+}
+
+QCheckBox::indicator:checked,
+QTableWidget::indicator:checked {
+    background-color: #F0A500;  /* Colore di riempimento (Giallo/Arancio) */
+    border-color: #F0A500;
+    image: none;                /* <-- FONDAMENTALE: Rimuove il "tick" di default */
+}
+
+QCheckBox::indicator:hover,
+QTableWidget::indicator:hover {
+    border-color: #3A5068;
 }

@@ -71,21 +71,27 @@ class OptimizationPage(QWidget):
         # Left: Chart
         self.chart_view = MarkowitzChartView(self)
         self.chart_view.setMinimumHeight(400)
-        content_layout.addWidget(self.chart_view, stretch=2)
+        self.chart_view.setMinimumWidth(450)
+        content_layout.addWidget(self.chart_view, stretch=3)
 
         # Right: Interactive Table
         self.delta_table = QTableWidget(0, 5)
-        self.delta_table.setHorizontalHeaderLabels(["Asset", "Current %", "Lock (Core)", "Optimal %", "Action"])
+        self.delta_table.setHorizontalHeaderLabels(["Asset", "Current %", "Lock", "Optimal %", "Action"])
+        self.delta_table.setMinimumWidth(440)
+        
         header = self.delta_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents) # Make checkbox column compact
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.Stretch)
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
         
         self.delta_table.setAlternatingRowColors(True)
         self.delta_table.setShowGrid(False)
         self.delta_table.verticalHeader().setVisible(False)
         self.delta_table.setSelectionBehavior(QTableWidget.SelectRows)
         
-        content_layout.addWidget(self.delta_table, stretch=1)
+        content_layout.addWidget(self.delta_table, stretch=2)
         main_layout.addLayout(content_layout)
 
     def create_summary_card(self, title: str, initial_value: str, color: str):
