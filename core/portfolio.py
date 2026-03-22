@@ -254,7 +254,7 @@ class PortfolioManager:
                 a ticker symbol and rows are daily adjusted close prices.
         """
         all_prices = pd.DataFrame()
-        semaphore = asyncio.Semaphore(5) # Limits to 5 concurrent IBKR requests
+        semaphore = asyncio.Semaphore(read_json(PathManager.CONFIG_FILE, "PACING_LIMIT") or 5) # Limits to concurrent IBKR requests
 
         async def fetch_single_asset(item):
             async with semaphore:

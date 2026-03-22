@@ -65,10 +65,14 @@ class SettingsPage(QWidget):
         self.risk_free_input.setSingleStep(0.1)
         self.risk_free_input.setSuffix(" %")
 
+        self.pacing_limit = QSpinBox()
+        self.pacing_limit.setRange(1, 20.0)
+
         form_layout.addRow(QLabel("Gemini API Key:"), self.api_key_input)
         form_layout.addRow(QLabel("AI Model:"), self.model_input)
         form_layout.addRow(QLabel("AI Output Language:"), self.language_input)
         form_layout.addRow(QLabel("Risk-Free Rate:"), self.risk_free_input)
+        form_layout.addRow(QLabel("Pacing Limit:"), self.pacing_limit)
 
         # ─── Monte Carlo Defaults ──────────────────────────────────────
         mc_section = QLabel("MONTE CARLO DEFAULTS")
@@ -143,6 +147,7 @@ class SettingsPage(QWidget):
             self.model_input.setText(config.get("GEMINI_MODEL", "gemini-1.5-pro"))
             self.language_input.setCurrentText(config.get("AI_LANGUAGE", "English"))
             self.risk_free_input.setValue(config.get("RISK_FREE_RATE", 0.0) * 100)
+            self.pacing_limit.setValue(config.get("PACING_LIMIT", 5))
             
             self.mc_years_input.setValue(config.get("DEFAULT_YEARS", 5))
             self.mc_sims_input.setCurrentText(str(config.get("DEFAULT_SIMS", 10000)))
@@ -171,6 +176,7 @@ class SettingsPage(QWidget):
         config["GEMINI_MODEL"] = self.model_input.text().strip()
         config["AI_LANGUAGE"] = self.language_input.currentText()
         config["RISK_FREE_RATE"] = round(self.risk_free_input.value() / 100.0, 4)
+        config["PACING_LIMIT"] = self.pacing_limit.value()
         
         config["DEFAULT_YEARS"] = self.mc_years_input.value()
         config["DEFAULT_SIMS"] = int(self.mc_sims_input.currentText())
