@@ -244,6 +244,9 @@ class OptimizationPage(QWidget):
             action = "Hold"
             if diff > 1.0: action = f"Buy +{diff:.1f}%"
             elif diff < -1.0: action = f"Sell {diff:.1f}%"
+
+            if o_weight == 0.0 and c_weight > 0.0:
+                action = f"Sell {-c_weight:.1f}%"
             
             if sym in self.get_locked_symbols():
                 action = "Locked (Core)"
