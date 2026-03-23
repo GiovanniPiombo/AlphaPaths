@@ -24,6 +24,8 @@ Built with a clean, modular architecture that strictly separates the UI (PySide6
 *   **Optimized Performance:** Employs a multi-threaded architecture to keep the UI responsive. Uses a "FastMathWorker" to instantly recalculate simulations from cached risk metrics without re-fetching historical data.
 *   **Professional UI:** Clean, dark-themed interface inspired by Bloomberg terminals, built with PySide6 and custom QSS styling.
 *   **Interactive Visualizations:** Dynamic Qcharts embedded in the UI display the simulation cone, with background paths and clearly highlighted percentile lines. The simulation graph supports interactive features including zoom clamping, rubber-band selection, and mouse wheel zoom for detailed analysis of projection paths.
+*   **Merton Jump-Diffusion Stress Testing:** Extends standard GBM simulations by incorporating discrete price jumps (Poisson processes) to model sudden market crashes and extreme tail events, providing a more conservative risk assessment.
+*   **Core-Satellite Portfolio Optimization:** Applies Modern Portfolio Theory (MPT) to calculate the Efficient Frontier and Maximum Sharpe Ratio portfolio. Allows users to "lock" strategic core asset
 
 ## Project Structure
 
@@ -39,11 +41,13 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 │   ├── dashboard_page.py         # Displays portfolio summary (NLV, Cash, PnL) and open positions. Triggers IBKRWorker.
 │   ├── simulation_page.py        # Monte Carlo controls (years, simulations). Displays results on a graph. Manages SimulationWorker and FastMathWorker.
 │   ├── settings_page.py          # Settings Page
+│   ├── optimization_page.py      # Portfolio optimization interface. Displays Efficient Frontier and actionable trade recommendations.
 │   └── ai_page.py                # Displays the AI-generated report. Triggers AIWorker.
 │
 ├── workers/                      # BACKGROUND THREADS: Bridge between the UI and the Core logic.
 │   ├── ibkr_thread.py            # IBKRWorker: Fetches live portfolio data without freezing the UI.
 │   ├── simulation_thread.py      # SimulationWorker & FastMathWorker: Handle full simulation setup and fast recalculations.
+│   ├── optimization_thread.py    # OptimizationWorker: Runs Markowitz optimization with core-satellite constraints.
 │   └── ai_thread.py              # AIWorker: Manages communication with the Gemini API.
 │
 ├── core/                         # PURE BUSINESS LOGIC: No Qt dependencies. Can be tested independently.
@@ -53,6 +57,7 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 │   ├── ai_review.py              # Handles prompting and communication with the Google Gemini API.
 │   ├── graph.py                  # Standalone plotting functions (used for debugging, as the UI uses its own canvas).
 │   ├── path_manager.py           # Centralized path management for assets, configs, and prompts across the application.
+│   ├── markowitz_model.py        # MarkowitzOptimizer: Implements Modern Portfolio Theory for efficient frontier and Sharpe maximization.
 │   └── utils.py                  # Shared utility functions (e.g., reading JSON files).
 │
 ├── tests/                        # UNIT TESTS
@@ -67,7 +72,8 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 │   └── style.qss                 # Qt Style Sheet for the application's dark theme.
 
 ├── components/                   # Components
-│   └── chart_widget              # Montecarlo Simulation QChart
+│   ├── chart_widget              # Montecarlo Simulation QChart
+│   └── markowitz_chart.py        # MarkowitzChartView: Custom QChartView for Efficient Frontier rendering.
 │
 ├── .github/                      # GITHUB ACTIONS
 │   └── workflows/
@@ -85,7 +91,7 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 
 - Core Language: Python 3.9+
 - GUI Framework: PySide6 (Qt for Python)
-- Data & Math: Pandas, NumPy
+- Data & Math: Pandas, NumPy, SciPy
 - Visualization: Matplotlib
 - Broker Integration: IBKR API (ib_async)
 - Artificial Intelligence: Google Gemini API (google-generativeai)
@@ -206,9 +212,30 @@ The application can be packaged into a single executable file using PyInstaller,
 
 * **Dashboard:** Upon starting, the app automatically connects to IBKR and fetches your portfolio data. Click the "Refresh IBKR Data" button to manually update.
 * **Simulation:** Navigate to the "Simulation" tab. The first time you visit, it will automatically start a background preload (fetching historical data and calculating base risk metrics). Once preloaded, you can adjust the years and number of simulations and click "Run Simulation" for instant results.
+* **Optimization:** After loading portfolio data, navigate to the "Optimization" tab. Select which assets you want to "lock" (core holdings) by checking the boxes in the table. Click "Run Optimization" to calculate the constrained Efficient Frontier and the optimal Max Sharpe portfolio. The page will display the improvement in Sharpe ratio and a detailed action table with Buy/Sell/Hold recommendations for each asset.
 * **AI Insights:** After running a simulation, go to the "AI Insights" tab. The AI analysis will trigger automatically, providing a detailed report on your portfolio's risk and potential.
 * **Settings:** A dedicated interface that allows you to configure Gemini API keys, IBKR connection parameters (host, port, client ID), and simulation defaults without manually editing the JSON file.
-  
+
+## Core-Satellite Optimization
+
+The optimization module implements a **Core-Satellite** investment strategy:
+
+- **Core Assets (Locked):** When you check the "Lock" checkbox next to an asset in the optimization table, its current portfolio weight is frozen. The optimizer treats these assets as untouchable strategic holdings (e.g., a broad-market ETF that defines your baseline allocation).
+- **Satellite Assets (Optimized):** All unlocked assets are free to be reallocated by the Markowitz optimizer. The mathematical engine (SLSQP) redistributes the remaining portfolio weight among these satellite positions to maximize the Sharpe Ratio while respecting the locked core weights.
+
+This approach allows you to maintain your long-term strategic allocations while tactically optimizing the tactical or speculative portion of your portfolio.
+
+## Simulation Models: GBM vs. Merton
+
+The application offers two distinct Monte Carlo simulation models:
+
+| Model | Description | Best Used For |
+|-------|-------------|---------------|
+| **Standard GBM** (Geometric Brownian Motion) | Assumes continuous, normally distributed price movements with constant drift and volatility. | Standard market conditions, baseline projections, and when you expect relatively stable markets. |
+| **Merton Stress Test** (Jump-Diffusion) | Extends GBM by adding discrete price jumps (Poisson process) to model sudden, discontinuous events like market crashes or flash crashes. | Stress testing, bear market scenarios, and when you want a more conservative risk assessment that accounts for tail risk. |
+
+The Merton model parameters (`λ` for jump frequency, `m` for average jump size, `ν` for jump volatility) are automatically calibrated from your portfolio's historical data using the configurable **Jump Threshold** setting in the Settings page.
+
 ## Running Tests
 
 The core mathematical logic is thoroughly tested. To run the test suite:
