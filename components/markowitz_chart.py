@@ -2,6 +2,7 @@ from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QColor, QPen, QPainter, QCursor
 from PySide6.QtWidgets import QToolTip
 from PySide6.QtCharts import QChart, QChartView, QSplineSeries, QScatterSeries, QValueAxis
+from core.logger import app_logger
 
 class MarkowitzChartView(QChartView):
     """
@@ -38,6 +39,7 @@ class MarkowitzChartView(QChartView):
             current_stats (dict): Stats for the Current Portfolio.
             optimal_stats (dict): Stats for the Max Sharpe Portfolio.
         """
+        app_logger.debug(f"Redrawing MarkowitzChartView with {len(frontier_points)} frontier points.")
         self.chart.removeAllSeries()
         for axis in self.chart.axes():
             self.chart.removeAxis(axis)

@@ -4,6 +4,7 @@ from workers.simulation_thread import SimulationWorker, FastMathWorker
 from core.utils import read_json
 from components.chart_widget import MonteCarloChartView
 from core.path_manager import PathManager
+from core.logger import app_logger
 
 class SimulationPage(QWidget):
     """
@@ -161,7 +162,7 @@ class SimulationPage(QWidget):
             return
             
         self.simulation_started.emit()
-        print("[UI DEBUG] Starting background Monte Carlo preload...")
+        app_logger.info("Starting background Monte Carlo preload...")
         self.run_btn.setEnabled(False)
         self.run_btn.setText("Preloading in background...")
         
@@ -247,6 +248,7 @@ class SimulationPage(QWidget):
         """
         self.run_btn.setEnabled(True)
         self.run_btn.setText("Run Simulation")
+        app_logger.error(f"Simulation Error UI Popup: {error_msg}")
         self.simulation_finished.emit({})
         QMessageBox.critical(self, "Simulation Error", f"An error occurred:\n{error_msg}")
 
@@ -268,7 +270,7 @@ class SimulationPage(QWidget):
         years = self.spin_years.value()
         simulations = int(self.combo_sims.currentText())
         
-        print(f"[UI DEBUG] Starting FastMathWorker: {years}Y, {simulations} sims...")
+        app_logger.info(f"Starting FastMathWorker: {years}Y, {simulations} sims...")
         
         # ── Launch the thread ────────────────────────────────────
         self.fast_worker = FastMathWorker(

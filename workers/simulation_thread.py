@@ -6,6 +6,7 @@ from core.gbm_model import GBMSimulator
 from core.merton_model import MJDSimulator
 from core.utils import read_json
 from core.path_manager import PathManager
+from core.logger import app_logger
 
 class SimulationWorker(QThread):
     """
@@ -48,6 +49,7 @@ class SimulationWorker(QThread):
         try:
             asyncio.run(self.run_simulation_tasks())
         except Exception as e:
+            app_logger.exception(f"Error during simulation: {str(e)}")
             self.error_occurred.emit(f"Simulation Worker Error: {str(e)}")
 
     async def run_simulation_tasks(self):
@@ -120,6 +122,7 @@ class SimulationWorker(QThread):
             self.data_fetched.emit(payload)
 
         except Exception as e:
+            app_logger.exception(f"Error during simulation: {str(e)}")
             self.error_occurred.emit(f"Error during simulation: {str(e)}")
         finally:
             pm.disconnect()
@@ -211,4 +214,5 @@ class FastMathWorker(QThread):
             }
             self.data_calculated.emit(payload)
         except Exception as e:
+            app_logger.exception(f"Error during simulation: {str(e)}")
             self.error_occurred.emit(f"Fast Math Error: {str(e)}")

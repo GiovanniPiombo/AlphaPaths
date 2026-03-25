@@ -3,6 +3,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from workers.optimization_thread import OptimizationWorker
 from components.markowitz_chart import MarkowitzChartView
+from core.logger import app_logger
 
 class OptimizationPage(QWidget):
     """
@@ -193,6 +194,7 @@ class OptimizationPage(QWidget):
         heavy mathematical calculations without freezing the application.
         """
         if not self.metrics or not self.positions:
+            app_logger.warning("Optimization blocked: Data Missing")
             QMessageBox.warning(self, "Data Missing", "Please wait for IBKR data to finish loading in the Dashboard.")
             return
     
@@ -202,6 +204,8 @@ class OptimizationPage(QWidget):
         self.run_btn.setText("Optimizing...")
 
         locked = self.get_locked_symbols()
+        app_logger.info(f"Starting OptimizationWorker. Locked assets: {locked}")
+
         self.worker = OptimizationWorker(self.metrics, self.positions, locked)
         self.worker.progress_update.connect(lambda msg: self.run_btn.setText(msg))
         self.worker.optimization_finished.connect(self.on_optimization_complete)
@@ -275,4 +279,5 @@ class OptimizationPage(QWidget):
         self.run_btn.setEnabled(True)
         self.run_btn.setText("Run Optimization")
         self.optimization_finished.emit()
+        app_logger.error(f"Optimization Error UI Popup: {error_msg}")
         QMessageBox.critical(self, "Optimization Error", str(error_msg))

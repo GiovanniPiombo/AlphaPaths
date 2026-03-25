@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTableWidget, QTableWidgetItem, QHeaderView, QFrame, QMessageBox
 from PySide6.QtCore import Qt, Signal, QTimer
 from workers.ibkr_thread import IBKRWorker
+from core.logger import app_logger
 
 class DashboardPage(QWidget):
     """
@@ -166,17 +167,17 @@ class DashboardPage(QWidget):
         the button text to show progress, instantiates a new `IBKRWorker`, 
         connects its signals, and starts the thread.
         """
-        print("\n[UI DEBUG] 1. Button clicked! Starting function...")
+        app_logger.debug("Button clicked! Starting function...")
         self.refresh_btn.setEnabled(False)
         self.refresh_btn.setText("Connecting...")
 
-        print("[UI DEBUG] 2. Creating IBKRWorker thread...")
+        app_logger.debug("Creating IBKRWorker thread...")
         self.worker = IBKRWorker()
         self.worker.progress_update.connect(lambda msg: self.refresh_btn.setText(msg))
         self.worker.data_fetched.connect(self.on_data_fetched)
         self.worker.error_occurred.connect(self.on_error)
 
-        print("[UI DEBUG] 3. Starting the thread...")
+        app_logger.debug("Starting the thread...")
         self.worker.start()
 
     def on_data_fetched(self, data):
@@ -191,7 +192,7 @@ class DashboardPage(QWidget):
             data (dict): Parsed portfolio data including 'currency', 'nlv', 
                 'cash', 'pnl', 'risky_weight', 'cash_weight', and 'positions'.
         """
-        print("[UI DEBUG] 5. Data received from thread! Updating UI...")
+        app_logger.info("Data received from thread! Updating UI...")
 
         cur = data['currency']
         self._set_card_value(self.nlv_label, f"{cur} {data['nlv']:,.2f}", "neutral")
@@ -213,7 +214,7 @@ class DashboardPage(QWidget):
         self.refresh_btn.setEnabled(True)
         self.refresh_btn.setText("Refresh IBKR Data")
         
-        print("[UI DEBUG] 6. Dashboard finished. Emitting signal to start Monte Carlo...")
+        app_logger.debug("Dashboard finished. Emitting signal to start Monte Carlo...")
         self.cached_data = {
             "currency": data['currency'],
             "risky_weight": data['risky_weight'],
@@ -232,7 +233,7 @@ class DashboardPage(QWidget):
         Args:
             error_msg (str): The formatted error string from the worker thread.
         """
-        print(f"[UI DEBUG] Error received: {error_msg}")
+        app_logger.error(f"IBKR Error UI Popup: {error_msg}")
         self.refresh_btn.setEnabled(True)
         self.refresh_btn.setText("Refresh IBKR Data")
         QMessageBox.critical(self, "IBKR Error", f"An error occurred:\n{error_msg}")

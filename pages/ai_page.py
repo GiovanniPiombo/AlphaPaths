@@ -1,6 +1,7 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextBrowser, QMessageBox
 from PySide6.QtCore import Qt
 from workers.ai_thread import AIWorker
+from core.logger import app_logger
 
 class AIPage(QWidget):
     """
@@ -118,9 +119,10 @@ class AIPage(QWidget):
             return
 
         if self.worker is not None and self.worker.isRunning():
-            print("[UI DEBUG] AI analysis is already running in the background. Skipping duplicate request.")
+            app_logger.warning("AI analysis is already running. Skipping duplicate request.")
             return
 
+        app_logger.info("Starting AIWorker for portfolio analysis...")
         self.analyze_btn.setEnabled(False)
         self.analyze_btn.setText("Analysis in progress...")
         
@@ -185,4 +187,5 @@ class AIPage(QWidget):
         self.analyze_btn.setEnabled(True)
         self.analyze_btn.setText("Retry Analysis")
         self.report_display.setHtml(f"<p style='color: #E05252;'><b>Error:</b> {error_msg}</p>")
+        app_logger.error(f"AI Error UI Popup: {error_msg}")
         QMessageBox.critical(self, "AI Error", f"An error occurred:\n{error_msg}")

@@ -1,6 +1,7 @@
 from PySide6.QtCore import QThread, Signal
 import numpy as np
 from core.markowitz_model import MarkowitzOptimizer
+from core.logger import app_logger
 
 class OptimizationWorker(QThread):
     """
@@ -54,6 +55,7 @@ class OptimizationWorker(QThread):
         7. Packages and emits the results back to the UI thread.
         """
         try:
+            app_logger.debug(f"OptimizationWorker started. Locked assets: {self.locked_symbols}")
             self.progress_update.emit("Initializing Markowitz engine...")
             
             asset_returns = self.metrics.get("asset_returns", {})
@@ -90,9 +92,11 @@ class OptimizationWorker(QThread):
             initial_array = np.array(initial_guess)
 
             self.progress_update.emit("Finding optimal Max Sharpe portfolio...")
+            app_logger.debug("Starting scipy SLSQP minimization...")
             optimal_stats = optimizer.optimize_max_sharpe(bounds=bounds_tuple, initial_guess=initial_array)
 
             self.progress_update.emit("Calculating the constrained Efficient Frontier...")
+            app_logger.debug("Generating frontier curve points...")
             frontier_points = optimizer.generate_efficient_frontier(points=40, bounds=bounds_tuple, initial_guess=initial_array)
 
             payload = {
@@ -104,7 +108,9 @@ class OptimizationWorker(QThread):
             }
 
             self.progress_update.emit("Optimization complete!")
+            app_logger.info("Optimization Worker finished successfully.")
             self.optimization_finished.emit(payload)
 
         except Exception as e:
+            app_logger.exception(f"Optimization Worker crashed: {str(e)}")
             self.error_occurred.emit(f"Optimization Worker Error: {str(e)}")

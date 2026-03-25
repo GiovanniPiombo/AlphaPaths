@@ -2,6 +2,7 @@ from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEd
 from PySide6.QtCore import Qt
 from core.utils import read_json, write_json
 from core.path_manager import PathManager
+from core.logger import app_logger
 
 class SettingsPage(QWidget):
     """
@@ -206,10 +207,12 @@ class SettingsPage(QWidget):
         config["IBKR_TIMEOUT"] = self.ibkr_timeout_input.value()
 
         if write_json(PathManager.CONFIG_FILE, config):
+            app_logger.info("User settings saved successfully.")
             QMessageBox.information(
                 self, 
                 "Restart Recommended", 
                 "Settings saved successfully!\n\nPlease restart the application for all changes to take full effect."
             )
         else:
+            app_logger.error("Could not save the config.json file from UI.")
             QMessageBox.critical(self, "Error", "Could not save the config.json file.")

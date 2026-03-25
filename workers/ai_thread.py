@@ -1,5 +1,6 @@
 from PySide6.QtCore import QThread, Signal
 from core.ai_review import get_portfolio_analysis
+from core.logger import app_logger
 
 class AIWorker(QThread):
     """
@@ -48,13 +49,16 @@ class AIWorker(QThread):
         any completely unhandled exceptions.
         """
         try:
-            print("[DEBUG] AIWorker: Sending data to Gemini...")
+            app_logger.info("AIWorker: Sending data to Gemini...")
             result = get_portfolio_analysis(self.portfolio_data)
             
             if "error" in result:
+                app_logger.error(f"AIWorker received an explicit error from API: {result['error']}")
                 self.error_occurred.emit(result["error"])
             else:
+                app_logger.debug("AIWorker: Analysis generated successfully.")
                 self.analysis_fetched.emit(result)
                 
         except Exception as e:
+            app_logger.exception(f"Unexpected crash in AIWorker: {str(e)}")
             self.error_occurred.emit(f"Unexpected error during AI analysis: {str(e)}")

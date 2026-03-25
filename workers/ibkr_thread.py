@@ -3,6 +3,7 @@ from PySide6.QtCore import QThread, Signal
 from core.portfolio import PortfolioManager
 from core.utils import read_json
 from core.path_manager import PathManager
+from core.logger import app_logger
 
 class IBKRWorker(QThread):
     """
@@ -35,21 +36,21 @@ class IBKRWorker(QThread):
         and acts as a global try/except block to ensure any API crashes are safely 
         emitted as error signals rather than taking down the entire application.
         """
-        print("\n[DEBUG] 1. THREAD STARTED: Creating event loop...")
+        app_logger.debug("THREAD STARTED: Creating asyncio event loop for IBKR...")
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            print("[DEBUG] 2. THREAD: Starting fetch_data_from_manager...")
+            app_logger.debug("THREAD: Starting fetch_data_from_manager...")
             data = loop.run_until_complete(self.fetch_data_from_manager())
             
-            print("[DEBUG] 8. THREAD: Data successfully fetched, emitting signal...")
+            app_logger.info("THREAD: Data successfully fetched, emitting signal...")
             self.data_fetched.emit(data)
         except Exception as e:
-            print(f"\n[CRITICAL THREAD ERROR]: {e}")
+            app_logger.critical(f"CRITICAL THREAD ERROR IN IBKR: {e}")
             self.error_occurred.emit(str(e))
         finally:
             loop.close()
-            print("[DEBUG] THREAD FINISHED.\n")
+            app_logger.debug("THREAD FINISHED: IBKR loop closed.")
 
     async def fetch_data_from_manager(self):
         """
@@ -73,14 +74,14 @@ class IBKRWorker(QThread):
         
         self.progress_update.emit(f"Connecting to IBKR ({host}:{port})...")
         await manager.connect()
-        print("[DEBUG] IBKR: Connected successfully!")
+        app_logger.info("IBKR: Connected successfully!")
         
         try:
             self.progress_update.emit("Analyzing assets and converting currencies (FX)...")
             
             portfolio_data = await manager.fetch_summary_and_positions()
             
-            print("[DEBUG] IBKR: Returning formatted data for the UI...")
+            app_logger.debug("IBKR: Returning formatted data for the UI...")
             
             portfolio_data["mu"] = 0.05
             portfolio_data["sigma"] = 0.15
@@ -89,5 +90,5 @@ class IBKRWorker(QThread):
             return portfolio_data
 
         finally:
-            print("[DEBUG] IBKR: Disconnecting...")
+            app_logger.info("IBKR: Disconnecting manager.")
             manager.disconnect()

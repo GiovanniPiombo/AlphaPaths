@@ -2,6 +2,7 @@ import os
 import sys
 import json
 from pathlib import Path
+from core.logger import app_logger
 
 class PathManager:
     """
@@ -54,7 +55,7 @@ class PathManager:
             }
             with open(cls.CONFIG_FILE, 'w', encoding='utf-8') as f:
                 json.dump(default_config, f, indent=4)
-            print(f"Created default config at {cls.CONFIG_FILE}")
+            app_logger.info(f"Created default config at {cls.CONFIG_FILE}")
 
         if not cls.PROMPTS_FILE.exists():
             default_prompts = {
@@ -65,4 +66,4 @@ class PathManager:
             }
             with open(cls.PROMPTS_FILE, 'w', encoding='utf-8') as f:
                 json.dump(default_prompts, f, indent=4)
-            print(f"Created default prompts at {cls.PROMPTS_FILE}")
+            app_logger.info(f"Created default prompts at {cls.PROMPTS_FILE}")

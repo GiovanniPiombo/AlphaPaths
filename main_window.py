@@ -1,5 +1,4 @@
-import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel
+from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel
 from PySide6.QtCore import Qt
 
 from pages.settings_page import SettingsPage
@@ -9,6 +8,7 @@ from pages.ai_page import AIPage
 from core.utils import read_json
 from core.path_manager import PathManager
 from pages.optimization_page import OptimizationPage
+from core.logger import app_logger
 
 class MainWindow(QMainWindow):
     """
@@ -135,6 +135,7 @@ class MainWindow(QMainWindow):
 
     def switch_page(self, index, active_button):
         """Switches the visible page and updates sidebar button states."""
+        app_logger.debug(f"User navigated to page index: {index} ({active_button.text()})")
         self.stacked_widget.setCurrentIndex(index)
         
         # Uncheck all buttons except the active one
@@ -145,6 +146,7 @@ class MainWindow(QMainWindow):
 
     def on_dashboard_ready(self):
         """Called when IBKR data is successfully loaded in the dashboard."""
+        app_logger.info("MainWindow: Dashboard data received. Merging into shared cache.")
         self.shared_portfolio_data.update(self.dashboard_page.cached_data)
         self.simulation_page.start_background_preload()
 
@@ -154,6 +156,7 @@ class MainWindow(QMainWindow):
 
         param: sim_data: A dictionary containing the results of the Monte Carlo simulation, including mu, sigma, and scenario outcomes.
         """
+        app_logger.info("MainWindow: Simulation data received. Distributing to AI and Optimization pages.")
         # Merge the simulation math (mu, sigma, scenarios) into our shared dictionary
         self.shared_portfolio_data.update(sim_data)
         
@@ -167,16 +170,3 @@ class MainWindow(QMainWindow):
         self.shared_portfolio_data.get("metrics", {}), 
         self.shared_portfolio_data.get("positions", [])
 )
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    # Load Stylesheet
-    try:
-        with open(PathManager.STYLE_FILE, "r") as f:
-            app.setStyleSheet(f.read())
-    except FileNotFoundError:
-        print("[WARNING] style.qss not found. Running with default UI.")
-
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())

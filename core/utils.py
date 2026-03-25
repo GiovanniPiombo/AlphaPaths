@@ -1,4 +1,5 @@
 import json
+from core.logger import app_logger
 
 def read_json(file, parameter_name=None):
     """
@@ -29,10 +30,10 @@ def read_json(file, parameter_name=None):
         return data
 
     except FileNotFoundError:
-        print(f"Error: {file} file not found.")
+        app_logger.error(f"Error: {file} file not found.")
         exit(1)
     except json.JSONDecodeError:
-        print(f"Error: {file} is not a valid JSON.")
+        app_logger.error(f"Error: {file} is not a valid JSON.")
         exit(1)
 
 def format_json(data):
@@ -69,5 +70,5 @@ def write_json(file, data):
             json.dump(data, f, indent=4, ensure_ascii=False)
         return True
     except Exception as e:
-        print(f"Error writing {file}: {e}")
+        app_logger.error(f"Error writing {file}: {e}")
         return False

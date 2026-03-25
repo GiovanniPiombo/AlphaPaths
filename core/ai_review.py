@@ -3,6 +3,7 @@ from google.genai import types
 import json
 from core.utils import read_json, format_json
 from core.path_manager import PathManager
+from core.logger import app_logger
 
 # Load configuration and initialize the client
 try:
@@ -10,7 +11,7 @@ try:
     MODEL_NAME = read_json(PathManager.CONFIG_FILE, "GEMINI_MODEL")
     prompts_data = read_json(PathManager.PROMPTS_FILE)
 except ValueError as e:
-    print(f"Error: {e}")
+    app_logger.critical(f"Missing or invalid AI configuration: {e}")
     exit(1)
 
 client = genai.Client(api_key=GEMINI_API_KEY)
@@ -41,7 +42,8 @@ def get_portfolio_analysis(portfolio_data: dict) -> dict:
     template = prompts_data["portfolio_analysis"]["user_prompt_template"]
     system_instruction = prompts_data["portfolio_analysis"]["system_instruction"]
     prompt = template.format(**portfolio_data)
-    
+    app_logger.info("Sending analysis request to Gemini API...")
+
     try:
         response = client.models.generate_content(
             model=MODEL_NAME,
@@ -52,11 +54,14 @@ def get_portfolio_analysis(portfolio_data: dict) -> dict:
                 temperature=0.4
             )
         )
+        app_logger.debug("Successfully received response from Gemini.")
         return json.loads(response.text)
         
     except json.JSONDecodeError:
+        app_logger.error("Gemini AI did not return a valid JSON format.")
         return {"error": "The AI did not return a valid JSON format."}
     except Exception as e:
+        app_logger.error(f"Connection or API error with Gemini: {str(e)}")
         return {"error": f"Connection or API error: {str(e)}"}
     
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ from core.ai_review import get_portfolio_analysis
 from core.utils import read_json, format_json
 from core.path_manager import PathManager
 from core.merton_model import MJDSimulator
+from core.logger import app_logger
 
 class PortfolioManager:
     """
@@ -70,8 +71,25 @@ class PortfolioManager:
         Returns:
             bool: True if the connection is successful, False otherwise.
         """
-        await self.ib.connectAsync(self.host, self.port, clientId=self.client_id)
-        return self.ib.isConnected()
+        app_logger.info(f"Attempting to connect to IBKR at {self.host}:{self.port} (Client: {self.client_id})")
+        try:
+            await self.ib.connectAsync(self.host, self.port, clientId=self.client_id)
+            
+            if self.ib.isConnected():
+                app_logger.info("Successfully connected to IBKR.")
+                return True
+            else:
+                app_logger.error("Failed to connect to IBKR: Connection dropped immediately.")
+                return False
+        except TimeoutError:
+            app_logger.error(f"Connection to IBKR timed out after {timeout} seconds. Is TWS/Gateway running?")
+            return False
+        except ConnectionRefusedError:
+            app_logger.error(f"Connection refused by IBKR at {self.host}:{self.port}. Check if the port is correct.")
+            return False
+        except Exception as e:
+            app_logger.error(f"Failed to connect to IBKR due to an unexpected error: {str(e)}")
+            return False
 
     def disconnect(self):
         """
@@ -79,6 +97,7 @@ class PortfolioManager:
         """
         if self.ib.isConnected():
             self.ib.disconnect()
+            app_logger.info("Disconnected from IBKR.")
 
     async def get_fx_rate(self, from_currency: str, to_currency: str) -> float:
         """
@@ -196,11 +215,11 @@ class PortfolioManager:
                 if pnl_sub and pnl_sub.dailyPnL is not None and not np.isnan(pnl_sub.dailyPnL):
                     await asyncio.sleep(1.5) # This gives IBKR time to send the finalized calculation
                     daily_pnl = float(pnl_sub.dailyPnL)
-                    print(f"[DEBUG] P&L successfully settled at: {daily_pnl}")
+                    app_logger.debug(f"P&L successfully settled at: {daily_pnl}")
                     break
             
             if elapsed >= timeout and daily_pnl == 0.0:
-                print("[WARNING] Timeout: Valid P&L not received within 5 seconds.")
+                app_logger.warning("Timeout: Valid P&L not received within 5 seconds.")
                 
             self.ib.cancelPnL(account_id)
 
@@ -271,8 +290,10 @@ class PortfolioManager:
                 if bars:
                     df = util.df(bars)
                     df['date'] = pd.to_datetime(df['date']).dt.normalize()
-                    df.set_index('date', inplace=True) 
+                    df.set_index('date', inplace=True)
+                    app_logger.debug(f"Historical data successfully downloaded for {symbol}")
                     return symbol, df['close']
+                app_logger.warning(f"No historical data found for {symbol}")
                 return symbol, None
 
         tasks = [fetch_single_asset(item) for item in self.risky_assets]

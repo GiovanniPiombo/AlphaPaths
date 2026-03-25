@@ -3,6 +3,7 @@ from PySide6.QtGui import QColor, QPen, QPainter, QCursor
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import Qt, QPointF, QTimer
 from PySide6.QtWidgets import QToolTip
+from core.logger import app_logger
 
 class MonteCarloChartView(QChartView):
     """
@@ -68,6 +69,7 @@ class MonteCarloChartView(QChartView):
             background_lines (np.ndarray): A 2D array containing the raw, individual 
                 simulation paths to be drawn faintly in the background.
         """
+        app_logger.debug(f"Redrawing MonteCarloChartView with {len(time_steps)} steps and {background_lines.shape[0]} background paths.")
         self.chart.removeAllSeries()
         
         for axis in self.chart.axes():
