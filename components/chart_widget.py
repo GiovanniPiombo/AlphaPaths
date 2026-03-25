@@ -1,7 +1,8 @@
 from PySide6.QtCore import Qt, QPointF
-from PySide6.QtGui import QColor, QPen, QPainter
+from PySide6.QtGui import QColor, QPen, QPainter, QCursor
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import Qt, QPointF, QTimer
+from PySide6.QtWidgets import QToolTip
 
 class MonteCarloChartView(QChartView):
     """
@@ -144,6 +145,8 @@ class MonteCarloChartView(QChartView):
         series.append(points)
         self.chart.addSeries(series)
 
+        series.hovered.connect(lambda point, state, n=name: self._handle_series_hover(point, state, n))
+
     def _clamp_axes(self):
         """
         Forces the chart's current viewport to remain within the original data boundaries.
@@ -238,3 +241,23 @@ class MonteCarloChartView(QChartView):
         if self.axis_x and self.axis_y:
             self.axis_x.setRange(self.orig_x_min, self.orig_x_max)
             self.axis_y.setRange(self.orig_y_min, self.orig_y_max)
+
+    def _handle_series_hover(self, point: QPointF, state: bool, series_name: str):
+        """
+        Handles the hover event over the main percentile lines.
+        Displays a native tooltip showing the specific day and portfolio value.
+        
+        Args:
+            point (QPointF): The exact point (x, y) on the chart that is being hovered.
+            state (bool): True if the mouse cursor entered the line area, False if it left.
+            series_name (str): The name of the series being hovered (e.g., 'Median (50%)').
+        """
+        if state:
+            day = int(point.x())
+            value = point.y()
+            
+            tooltip_text = f"<b>{series_name}</b><br>Day: {day}<br>Value: {value:,.0f} €"
+            
+            QToolTip.showText(QCursor.pos(), tooltip_text, self)
+        else:
+            QToolTip.hideText()
