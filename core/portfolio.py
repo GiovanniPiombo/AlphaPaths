@@ -90,7 +90,7 @@ class PortfolioManager:
                 app_logger.error("Failed to connect to IBKR: Connection dropped immediately.")
                 return False
         except TimeoutError:
-            app_logger.error(f"Connection to IBKR timed out after {timeout} seconds. Is TWS/Gateway running?")
+            app_logger.error(f"Connection to IBKR timed out after {self.config_timeout} seconds. Is TWS/Gateway running?")
             return False
         except ConnectionRefusedError:
             app_logger.error(f"Connection refused by IBKR at {self.host}:{self.port}. Check if the port is correct.")
