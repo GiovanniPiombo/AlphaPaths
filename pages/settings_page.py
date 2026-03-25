@@ -83,12 +83,16 @@ class SettingsPage(QWidget):
         self.lookback_period.setRange(1, 20.0)
         self.lookback_period.setSuffix(" Years")
 
+        self.currency_input = QComboBox()
+        self.currency_input.addItems(["AUTO (Broker Default)", "USD", "EUR", "GBP", "CHF"])
+
         form_layout.addRow(QLabel("Gemini API Key:"), self.api_key_input)
         form_layout.addRow(QLabel("AI Model:"), self.model_input)
         form_layout.addRow(QLabel("AI Output Language:"), self.language_input)
         form_layout.addRow(QLabel("Risk-Free Rate:"), self.risk_free_input)
         form_layout.addRow(QLabel("Pacing Limit:"), self.pacing_limit)
         form_layout.addRow(QLabel("Lookback Period:"), self.lookback_period)
+        form_layout.addRow(QLabel("Display Currency:"), self.currency_input)
 
         # ─── Monte Carlo Defaults ──────────────────────────────────────
         mc_section = QLabel("MONTE CARLO DEFAULTS")
@@ -175,6 +179,7 @@ class SettingsPage(QWidget):
             self.ibkr_port_input.setValue(config.get("IBKR_PORT", 4001))
             self.ibkr_client_id_input.setValue(config.get("IBKR_CLIENT_ID", 1))
             self.ibkr_timeout_input.setValue(config.get("IBKR_TIMEOUT", 5.0))
+            self.currency_input.setCurrentText(config.get("DISPLAY_CURRENCY", "AUTO (Broker Default)"))
 
     def save_settings(self):
         """
@@ -205,6 +210,7 @@ class SettingsPage(QWidget):
         config["IBKR_PORT"] = self.ibkr_port_input.value()
         config["IBKR_CLIENT_ID"] = self.ibkr_client_id_input.value()
         config["IBKR_TIMEOUT"] = self.ibkr_timeout_input.value()
+        config["DISPLAY_CURRENCY"] = self.currency_input.currentText()
 
         if write_json(PathManager.CONFIG_FILE, config):
             app_logger.info("User settings saved successfully.")

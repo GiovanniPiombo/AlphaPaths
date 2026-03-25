@@ -60,9 +60,9 @@ class DashboardPage(QWidget):
         cards_layout = QHBoxLayout()
         cards_layout.setSpacing(15)
 
-        nlv_card, self.nlv_label = self.create_summary_card("NET LIQUIDATION VALUE", "€ 0.00", "neutral")
-        cash_card, self.cash_label = self.create_summary_card("TOTAL CASH", "€ 0.00", "neutral")
-        pnl_card, self.pnl_label = self.create_summary_card("DAILY P&L", "€ 0.00", "neutral")
+        nlv_card, self.nlv_label = self.create_summary_card("NET LIQUIDATION VALUE", "0.00", "neutral")
+        cash_card, self.cash_label = self.create_summary_card("TOTAL CASH", "0.00", "neutral")
+        pnl_card, self.pnl_label = self.create_summary_card("DAILY P&L", "0.00", "neutral")
 
         cards_layout.addWidget(nlv_card)
         cards_layout.addWidget(cash_card)

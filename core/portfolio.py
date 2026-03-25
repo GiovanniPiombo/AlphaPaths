@@ -198,17 +198,30 @@ class PortfolioManager:
                 'pnl', 'positions' (formatted for the UI), and calculated weights.
         """
         summary = await self.ib.accountSummaryAsync()
-        
+    
         account_id = ""
+        account_currency = ""
+    
         for item in summary:
             if not account_id:
                 account_id = item.account 
-                
+            
             if item.tag == "NetLiquidation":
                 self.total_value = float(item.value)
-                self.base_currency = item.currency
+                account_currency = item.currency
             elif item.tag == "TotalCashValue":
                 self.cash_value_base = float(item.value)
+
+        target_currency = str(read_json(PathManager.CONFIG_FILE, "DISPLAY_CURRENCY") or "AUTO")
+        target_currency = target_currency.split()[0]
+    
+        if target_currency != "AUTO" and target_currency != account_currency:
+            self.base_currency = target_currency
+            fx_rate = await self.get_fx_rate(account_currency, self.base_currency)
+            self.total_value *= fx_rate
+            self.cash_value_base *= fx_rate
+        else:
+            self.base_currency = account_currency
 
         daily_pnl = 0.0
         if account_id:

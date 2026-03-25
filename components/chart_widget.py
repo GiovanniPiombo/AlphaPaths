@@ -4,6 +4,8 @@ from PySide6.QtCharts import QChart, QChartView, QLineSeries, QValueAxis
 from PySide6.QtCore import Qt, QPointF, QTimer
 from PySide6.QtWidgets import QToolTip
 from core.logger import app_logger
+from core.utils import read_json
+from core.path_manager import PathManager
 
 class MonteCarloChartView(QChartView):
     """
@@ -69,6 +71,8 @@ class MonteCarloChartView(QChartView):
             background_lines (np.ndarray): A 2D array containing the raw, individual 
                 simulation paths to be drawn faintly in the background.
         """
+        target_currency = str(read_json(PathManager.CONFIG_FILE, "DISPLAY_CURRENCY") or "AUTO").split()[0]
+        self.current_currency = target_currency if target_currency != "AUTO" else "€"
         app_logger.debug(f"Redrawing MonteCarloChartView with {len(time_steps)} steps and {background_lines.shape[0]} background paths.")
         self.chart.removeAllSeries()
         
@@ -109,7 +113,7 @@ class MonteCarloChartView(QChartView):
         self.axis_x.setGridLineColor(QColor(200, 208, 220, 25))
 
         self.axis_y = QValueAxis()
-        self.axis_y.setTitleText("Portfolio Value (€)")
+        self.axis_y.setTitleText(f"Portfolio Value ({self.current_currency})") 
         self.axis_y.setLabelFormat("%.0f")
         self.axis_y.setRange(self.orig_y_min, self.orig_y_max)
         self.axis_y.setLabelsColor(QColor('#C8D0DC'))
@@ -258,7 +262,9 @@ class MonteCarloChartView(QChartView):
             day = int(point.x())
             value = point.y()
             
-            tooltip_text = f"<b>{series_name}</b><br>Day: {day}<br>Value: {value:,.0f} €"
+            cur = getattr(self, 'current_currency', '€')
+            
+            tooltip_text = f"<b>{series_name}</b><br>Day: {day}<br>Value: {value:,.0f} {cur}"
             
             QToolTip.showText(QCursor.pos(), tooltip_text, self)
         else:

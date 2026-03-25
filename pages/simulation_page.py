@@ -100,9 +100,9 @@ class SimulationPage(QWidget):
         cards_layout = QHBoxLayout()
         cards_layout.setSpacing(15)
 
-        worst_card, self.worst_label = self.create_summary_card("WORST CASE (5%)", "€ 0.00", "#E05252")
-        median_card, self.median_label = self.create_summary_card("MEDIAN CASE (50%)", "€ 0.00", "#E8EDF5")
-        best_card, self.best_label = self.create_summary_card("BEST CASE (95%)", "€ 0.00", "#2ECC8A")
+        worst_card, self.worst_label = self.create_summary_card("WORST CASE (5%)", "0.00", "#E05252")
+        median_card, self.median_label = self.create_summary_card("MEDIAN CASE (50%)", "0.00", "#E8EDF5")
+        best_card, self.best_label = self.create_summary_card("BEST CASE (95%)", "0.00", "#2ECC8A")
 
         cards_layout.addWidget(worst_card)
         cards_layout.addWidget(median_card)
@@ -212,7 +212,9 @@ class SimulationPage(QWidget):
 
         scenarios = active_data["scenarios"]
         
-        cur = "€"
+        target_currency = str(read_json(PathManager.CONFIG_FILE, "DISPLAY_CURRENCY") or "AUTO").split()[0]
+        cur = target_currency if target_currency != "AUTO" else "€"
+    
         self.worst_label.setText(f"{cur} {scenarios['Worst (5%)']:,.2f}")
         self.median_label.setText(f"{cur} {scenarios['Median (50%)']:,.2f}")
         self.best_label.setText(f"{cur} {scenarios['Best (95%)']:,.2f}")
