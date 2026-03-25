@@ -65,6 +65,12 @@ class PortfolioManager:
         self.total_portfolio_mu = 0.0
         self.total_portfolio_vol = 0.0
 
+        self.config_timeout = float(read_json("config.json", "IBKR_TIMEOUT") or 5.0)
+        self.config_lookback = str(read_json(PathManager.CONFIG_FILE, "LOOKBACK_PERIOD") or 5)
+        self.config_pacing = int(read_json(PathManager.CONFIG_FILE, "PACING_LIMIT") or 5)
+        self.config_rf_rate = float(read_json(PathManager.CONFIG_FILE, "RISK_FREE_RATE") or 0.0)
+        self.config_jump_thresh = float(read_json(PathManager.CONFIG_FILE, "JUMP_THRESHOLD") or 3.0)
+
     # ── CONNECTION AND UTILITIES ──────────────────────────────────
     async def connect(self) -> bool:
         """
@@ -152,7 +158,7 @@ class PortfolioManager:
         raise ValueError(f"Exchange rate not found for {pair}")
 
     @staticmethod
-    def annualize(daily_variance: float, trading_days: int = 252) -> float:
+    def annualize(daily_variance: float, trading_days: int = TRADING_DAYS) -> float:
         """
         Converts daily variance into annualized variance.
 
@@ -208,19 +214,20 @@ class PortfolioManager:
         if account_id:
             pnl_sub = self.ib.reqPnL(account_id)
             
-            timeout = float(read_json("config.json", "IBKR_TIMEOUT") or 5.0)
             elapsed = 0.0
             
-            while elapsed < timeout:
-                await asyncio.sleep(0.2)
-                elapsed += 0.2
-                if pnl_sub and pnl_sub.dailyPnL is not None and not np.isnan(pnl_sub.dailyPnL):
-                    await asyncio.sleep(1.5) # This gives IBKR time to send the finalized calculation
-                    daily_pnl = float(pnl_sub.dailyPnL)
-                    app_logger.debug(f"P&L successfully settled at: {daily_pnl}")
-                    break
+            try:
+                while elapsed < self.config_timeout:
+                    await asyncio.sleep(0.2)
+                    elapsed += 0.2
+                    if pnl_sub and getattr(pnl_sub, 'dailyPnL', None) is not None and not np.isnan(pnl_sub.dailyPnL):
+                        await asyncio.sleep(1.5) # This gives IBKR time to send the finalized calculation
+                        daily_pnl = float(pnl_sub.dailyPnL)
+                        break
+            finally:
+                self.ib.cancelPnL(account_id)
             
-            if elapsed >= timeout and daily_pnl == 0.0:
+            if elapsed >= self.config_timeout and daily_pnl == 0.0:
                 app_logger.warning("Timeout: Valid P&L not received within 5 seconds.")
                 
             self.ib.cancelPnL(account_id)
@@ -281,8 +288,7 @@ class PortfolioManager:
         all_prices = pd.DataFrame()
         cached_df = pd.DataFrame()
         
-        lookback_years = str(read_json(PathManager.CONFIG_FILE, "LOOKBACK_PERIOD") or 5)
-        duration_str = f"{lookback_years} Y"
+        duration_str = f"{self.config_lookback} Y"
         
         current_symbols = [item.contract.symbol for item in self.risky_assets]
 
@@ -312,7 +318,7 @@ class PortfolioManager:
                 app_logger.error(f"Failed to read cache file: {e}. Proceeding with full download.")
                 cached_df = pd.DataFrame()
 
-        semaphore = asyncio.Semaphore(read_json(PathManager.CONFIG_FILE, "PACING_LIMIT") or 5)
+        semaphore = asyncio.Semaphore(self.config_pacing)
 
         async def fetch_single_asset(item):
             async with semaphore:
@@ -338,9 +344,20 @@ class PortfolioManager:
         tasks = [fetch_single_asset(item) for item in self.risky_assets]
         results = await asyncio.gather(*tasks)
 
-        for symbol, close_series in results:
-            if close_series is not None:
-                all_prices = all_prices.join(close_series.rename(symbol), how='outer')
+        valid_series = [
+            close_series.rename(symbol) 
+            for symbol, close_series in results if close_series is not None
+        ]
+
+        if valid_series:
+            new_prices = pd.concat(valid_series, axis=1)
+    
+            if not cached_df.empty:
+                all_prices = pd.concat([cached_df, new_prices])
+                all_prices = all_prices[~all_prices.index.duplicated(keep='last')]
+                all_prices.sort_index(inplace=True)
+            else:
+                all_prices = new_prices
 
         if not cached_df.empty and not all_prices.empty:
             all_prices = pd.concat([cached_df, all_prices])
@@ -396,15 +413,14 @@ class PortfolioManager:
         daily_mu = np.dot(normalized_risky_weights, mean_daily_returns.values)
         risky_annual_mu = daily_mu * self.TRADING_DAYS
         
-        risk_free_rate = float(read_json(PathManager.CONFIG_FILE, "RISK_FREE_RATE") or 0.0)
-        self.total_portfolio_mu = (risky_annual_mu * self.sum_risky_weights) + (risk_free_rate * self.cash_weight) 
+        self.total_portfolio_mu = (risky_annual_mu * self.sum_risky_weights) + (self.config_rf_rate * self.cash_weight) 
         self.total_portfolio_vol = annual_volatility * self.sum_risky_weights 
         
         portfolio_daily_returns = all_returns.dot(normalized_risky_weights)
         daily_vol = portfolio_daily_returns.std()
         
-        jump_multiplier = float(read_json(PathManager.CONFIG_FILE, "JUMP_THRESHOLD") or 3.0)
-        threshold = jump_multiplier * daily_vol
+
+        threshold = self.config_jump_thresh * daily_vol
         jumps = portfolio_daily_returns[abs(portfolio_daily_returns) > threshold]
         
         if len(jumps) > 0:
@@ -428,7 +444,7 @@ class PortfolioManager:
             "nu": nu,
             "risky_capital": self.total_value * self.sum_risky_weights,
             "cash_capital": self.cash_value_base,
-            "risk_free_rate": risk_free_rate,
+            "risk_free_rate": self.config_rf_rate,
             "asset_returns": annual_asset_returns.to_dict(),
             "cov_matrix": annual_cov_matrix.to_dict(),
             "symbols": valid_symbols
@@ -474,17 +490,17 @@ class PortfolioManager:
         cash_growth = np.exp(metrics["risk_free_rate"] * dt * np.arange(steps + 1))
         cash_matrix = (metrics["cash_capital"] * cash_growth).reshape(-1, 1)
 
-        total_gbm_prices = risky_gbm_prices + cash_matrix
-        total_merton_prices = risky_merton_prices + cash_matrix
+        risky_gbm_prices += cash_matrix
+        risky_merton_prices += cash_matrix
         
         return {
             "gbm": {
-                "scenarios": gbm_simulator.get_scenarios(total_gbm_prices),
-                "prices": total_gbm_prices
+                "scenarios": gbm_simulator.get_scenarios(risky_gbm_prices),
+                "prices": risky_gbm_prices
             },
             "merton": {
-                "scenarios": merton_simulator.get_scenarios(total_merton_prices),
-                "prices": total_merton_prices
+                "scenarios": merton_simulator.get_scenarios(risky_merton_prices),
+                "prices": risky_merton_prices
             }
         }
 
