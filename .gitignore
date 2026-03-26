@@ -13,3 +13,5 @@ Thumbs.db
 .pytest_cache/
 logs/
 data/
+manual_portfolio.json
+config.json

@@ -1,0 +1,26 @@
+{
+    "base_currency": "EUR",
+    "cash": 12500.00,
+    "positions": [
+        {
+            "ticker": "AAPL",
+            "quantity": 15.5
+        },
+        {
+            "ticker": "MSFT",
+            "quantity": 10
+        },
+        {
+            "ticker": "VWCE.DE",
+            "quantity": 125
+        },
+        {
+            "ticker": "CSSPX.MI",
+            "quantity": 30
+        },
+        {
+            "ticker": "BTC-USD",
+            "quantity": 0.5
+        }
+    ]
+}

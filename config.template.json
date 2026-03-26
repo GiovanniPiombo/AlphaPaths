@@ -1,0 +1,18 @@
+{
+    "GEMINI_API_KEY": "YOUR API KEY",
+    "GEMINI_MODEL": "gemini-3-flash-preview",
+    "RISK_FREE_RATE": 0.02,
+    "IBKR_HOST": "127.0.0.1",
+    "IBKR_PORT": 4001,
+    "IBKR_CLIENT_ID": 1,
+    "AI_LANGUAGE": "English",
+    "DEFAULT_YEARS": 5,
+    "DEFAULT_SIMS": 10000,
+    "IBKR_TIMEOUT": 5.0,
+    "JUMP_THRESHOLD": 3.0,
+    "PACING_LIMIT": 5,
+    "LOOKBACK_PERIOD": 10,
+    "LOOK": 5,
+    "DISPLAY_CURRENCY": "EUR",
+    "ACTIVE_BROKER": "Manual (Yahoo Finance)"
+}
