@@ -513,7 +513,8 @@ class SimulationPage(QWidget):
             "worst_case": scenarios["Worst (5%)"],
             "median_case": scenarios["Median (50%)"],
             "best_case": scenarios["Best (95%)"],
-            "metrics": self.cached_metrics
+            "metrics": self.cached_metrics,
+            "years": self.slider_years.value()
         }
         
         if hasattr(self, 'dashboard_data'):
