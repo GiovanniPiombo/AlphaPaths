@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDoubleSpinBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QComboBox, QScrollArea, QCheckBox
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDoubleSpinBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QComboBox, QCheckBox, QTabWidget, QScrollArea
 from PySide6.QtCore import Qt
 from core.utils import read_json, write_json
 from core.path_manager import PathManager
@@ -11,7 +11,7 @@ class SettingsPage(QWidget):
     This page manages user preferences including Gemini API credentials, 
     Monte Carlo simulation defaults, and Broker connection parameters. 
     It handles loading existing configurations from `config.json`, 
-    displaying them in categorized form fields, and saving user modifications 
+    displaying them in categorized tabs, and saving user modifications 
     back to the local file system.
     """
     
@@ -28,13 +28,14 @@ class SettingsPage(QWidget):
 
     def setup_ui(self):
         """
-        Constructs and arranges the UI elements using a QFormLayout wrapped inside a QScrollArea.
+        Constructs and arranges the UI elements using a QTabWidget.
 
-        Organizes input fields into three distinct semantic sections that can be scrolled, 
-        while keeping the primary action buttons (Save Settings) fixed at the bottom:
-        1. AI & MATH CONFIGURATION (API keys, models, language, risk-free rate, pacing limit)
-        2. MONTE CARLO DEFAULTS (Years, simulation counts)
-        3. IBKR CONNECTION SETTINGS (Host, port, client ID, timeout)
+        Organizes input fields into four distinct tabs, each wrapped in a 
+        QScrollArea to prevent UI squashing when many fields are added:
+        1. Broker Settings
+        2. Base Mathematics
+        3. Monte Carlo
+        4. AI Configuration
         """
         main_layout = QVBoxLayout(self)
         main_layout.setSpacing(20)
@@ -44,88 +45,34 @@ class SettingsPage(QWidget):
         header_label.setObjectName("page_header")
         main_layout.addWidget(header_label)
 
-        # ─── SETUP SCROLL AREA ─────────────────────────────────────────
-        scroll_area = QScrollArea()
-        scroll_area.setWidgetResizable(True)
-        scroll_area.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        # ─── SETUP TAB WIDGET ─────────────────────────────────────────
+        self.tabs = QTabWidget()
+        main_layout.addWidget(self.tabs)
 
-        scroll_content = QWidget()
-        scroll_content.setStyleSheet("background: transparent;")
+        scroll_style = "QScrollArea { border: none; background: transparent; }"
+        content_style = "background: transparent;"
 
-        form_layout = QFormLayout(scroll_content)
-        form_layout.setSpacing(15)
-        form_layout.setContentsMargins(0, 0, 15, 0)
-        form_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-
-        # ── AI & Math Configuration ────────────────────────────────────
-        ai_section = QLabel("AI & MATH CONFIGURATION")
-        ai_section.setObjectName("section_label")
-        form_layout.addRow(ai_section)
-
-        self.api_key_input = QLineEdit()
-        self.api_key_input.setEchoMode(QLineEdit.Password)
-        self.api_key_input.setMinimumWidth(300)
-
-        self.model_input = QLineEdit()
+        # ── TAB 1: Broker Settings ────────────────────────────────────
+        tab_broker = QScrollArea()
+        tab_broker.setWidgetResizable(True)
+        tab_broker.setStyleSheet(scroll_style)
         
-        self.language_input = QComboBox()
-        self.language_input.addItems(["English", "Italiano", "Español", "Français", "Deutsch"])
+        broker_content = QWidget()
+        broker_content.setStyleSheet(content_style)
+        layout_broker = QFormLayout(broker_content)
+        layout_broker.setSpacing(15)
+        layout_broker.setContentsMargins(15, 15, 15, 15)
+        layout_broker.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
-        self.risk_free_input = QDoubleSpinBox()
-        self.risk_free_input.setRange(-10.0, 20.0)
-        self.risk_free_input.setSingleStep(0.1)
-        self.risk_free_input.setSuffix(" %")
-
-        self.pacing_limit = QSpinBox()
-        self.pacing_limit.setRange(1, 20)
-
-        self.lookback_period = QSpinBox()
-        self.lookback_period.setRange(1, 20.0)
-        self.lookback_period.setSuffix(" Years")
-
-        self.currency_input = QComboBox()
-        self.currency_input.addItems(["AUTO (Broker Default)", "USD", "EUR", "GBP", "CHF", "USDT"])
-
-        form_layout.addRow(QLabel("Gemini API Key:"), self.api_key_input)
-        form_layout.addRow(QLabel("AI Model:"), self.model_input)
-        form_layout.addRow(QLabel("AI Output Language:"), self.language_input)
-        form_layout.addRow(QLabel("Risk-Free Rate:"), self.risk_free_input)
-        form_layout.addRow(QLabel("Pacing Limit:"), self.pacing_limit)
-        form_layout.addRow(QLabel("Lookback Period:"), self.lookback_period)
-        form_layout.addRow(QLabel("Display Currency:"), self.currency_input)
-
-        # ─── Monte Carlo Defaults ──────────────────────────────────────
-        mc_section = QLabel("MONTE CARLO DEFAULTS")
-        mc_section.setObjectName("section_label")
-        mc_section.setStyleSheet("margin-top: 10px;")
-        form_layout.addRow(mc_section)
-
-        self.mc_years_input = QSpinBox()
-        self.mc_years_input.setRange(1, 30)
-        
-        self.mc_sims_input = QComboBox()
-        self.mc_sims_input.addItems(["1000", "10000", "50000", "100000"])
-
-        self.jump_threshold_input = QDoubleSpinBox()
-        self.jump_threshold_input.setRange(1.0, 10.0)
-        self.jump_threshold_input.setSingleStep(0.5)
-        self.jump_threshold_input.setSuffix(" \u03c3 (Sigma)")
-        self.jump_threshold_input.setToolTip("Sets the standard deviation multiplier to identify historical market crashes. Lower = more sensitive.")
-
-        form_layout.addRow(QLabel("Default Years:"), self.mc_years_input)
-        form_layout.addRow(QLabel("Default Simulations:"), self.mc_sims_input)
-        form_layout.addRow(QLabel("Jump Threshold:"), self.jump_threshold_input)
-
-        # ─── Broker Settings ───────────────────────────────────────────
-        broker_section = QLabel("BROKER SETTINGS")
-        broker_section.setObjectName("section_label")
-        broker_section.setStyleSheet("margin-top: 10px;") 
-        form_layout.addRow(broker_section)
-
+        # Main Broker Settings
         self.active_broker_input = QComboBox()
         self.active_broker_input.addItems(["Interactive Brokers", "Crypto Exchange", "Manual (Yahoo Finance)"])
         self.active_broker_input.currentTextChanged.connect(self.toggle_broker_fields)
+        
+        self.currency_input = QComboBox()
+        self.currency_input.addItems(["AUTO (Broker Default)", "USD", "EUR", "GBP", "CHF", "USDT"])
 
+        # IBKR Fields
         self.ibkr_host_input = QLineEdit()
         self.ibkr_port_input = QSpinBox()
         self.ibkr_port_input.setRange(1000, 9999)
@@ -135,12 +82,10 @@ class SettingsPage(QWidget):
         self.ibkr_timeout_input.setRange(1.0, 30.0)
         self.ibkr_timeout_input.setSingleStep(0.5)
         self.ibkr_timeout_input.setSuffix(" sec")
+        self.pacing_limit = QSpinBox()
+        self.pacing_limit.setRange(1, 20)
 
-        form_layout.addRow(QLabel("IBKR Host (IP):"), self.ibkr_host_input)
-        form_layout.addRow(QLabel("IBKR Port:"), self.ibkr_port_input)
-        form_layout.addRow(QLabel("IBKR Client ID:"), self.ibkr_client_id_input)
-        form_layout.addRow(QLabel("IBKR Data Timeout:"), self.ibkr_timeout_input)
-
+        # Crypto Fields
         self.crypto_exchange_input = QLineEdit()
         self.crypto_api_input = QLineEdit()
         self.crypto_api_input.setEchoMode(QLineEdit.Password)
@@ -152,18 +97,121 @@ class SettingsPage(QWidget):
         self.crypto_dust_input.setRange(0.0, 10.0)
         self.crypto_dust_input.setSingleStep(0.0001)
 
-        form_layout.addRow(QLabel("CCXT Exchange ID:"), self.crypto_exchange_input)
-        form_layout.addRow(QLabel("Crypto API Key:"), self.crypto_api_input)
-        form_layout.addRow(QLabel("Crypto Secret:"), self.crypto_secret_input)
-        form_layout.addRow(QLabel("Crypto Testnet:"), self.crypto_testnet_input)
-        form_layout.addRow(QLabel("Dust Threshold:"), self.crypto_dust_input)
+        layout_broker.addRow(QLabel("Active Broker:"), self.active_broker_input)
+        layout_broker.addRow(QLabel("Display Currency:"), self.currency_input)
+        
+        # Separator for IBKR
+        ibkr_label = QLabel("Interactive Brokers")
+        ibkr_label.setStyleSheet("color: gray; font-style: italic; margin-top: 10px; margin-bottom: 5px;")
+        layout_broker.addRow(ibkr_label)
+        layout_broker.addRow(QLabel("Host (IP):"), self.ibkr_host_input)
+        layout_broker.addRow(QLabel("Port:"), self.ibkr_port_input)
+        layout_broker.addRow(QLabel("Client ID:"), self.ibkr_client_id_input)
+        layout_broker.addRow(QLabel("Data Timeout:"), self.ibkr_timeout_input)
+        layout_broker.addRow(QLabel("Pacing Limit:"), self.pacing_limit)
 
-        form_layout.insertRow(23, QLabel("Active Broker:"), self.active_broker_input) 
+        # Separator for Crypto
+        crypto_label = QLabel("Crypto Exchange")
+        crypto_label.setStyleSheet("color: gray; font-style: italic; margin-top: 10px; margin-bottom: 5px;")
+        layout_broker.addRow(crypto_label)
+        layout_broker.addRow(QLabel("CCXT Exchange ID:"), self.crypto_exchange_input)
+        layout_broker.addRow(QLabel("API Key:"), self.crypto_api_input)
+        layout_broker.addRow(QLabel("Secret:"), self.crypto_secret_input)
+        layout_broker.addRow(QLabel("Testnet:"), self.crypto_testnet_input)
+        layout_broker.addRow(QLabel("Dust Threshold:"), self.crypto_dust_input)
 
-        scroll_area.setWidget(scroll_content)
-        main_layout.addWidget(scroll_area)
+        tab_broker.setWidget(broker_content)
+        self.tabs.addTab(tab_broker, "Broker Settings")
 
-        # ── CONTROLS ─────────────────────────────────────────
+        # ── TAB 2: Base Mathematics ───────────────────────────────────
+        tab_math = QScrollArea()
+        tab_math.setWidgetResizable(True)
+        tab_math.setStyleSheet(scroll_style)
+        
+        math_content = QWidget()
+        math_content.setStyleSheet(content_style)
+        layout_math = QFormLayout(math_content)
+        layout_math.setSpacing(15)
+        layout_math.setContentsMargins(15, 15, 15, 15)
+        layout_math.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+        self.risk_free_input = QDoubleSpinBox()
+        self.risk_free_input.setRange(-10.0, 20.0)
+        self.risk_free_input.setSingleStep(0.1)
+        self.risk_free_input.setSuffix(" %")
+        
+        self.lookback_period = QSpinBox()
+        self.lookback_period.setRange(1, 20.0)
+        self.lookback_period.setSuffix(" Years")
+
+        layout_math.addRow(QLabel("Risk-Free Rate:"), self.risk_free_input)
+        layout_math.addRow(QLabel("Lookback Period:"), self.lookback_period)
+
+        tab_math.setWidget(math_content)
+        self.tabs.addTab(tab_math, "Base Mathematics")
+
+        # ── TAB 3: Monte Carlo ────────────────────────────────────────
+        tab_mc = QScrollArea()
+        tab_mc.setWidgetResizable(True)
+        tab_mc.setStyleSheet(scroll_style)
+        
+        mc_content = QWidget()
+        mc_content.setStyleSheet(content_style)
+        layout_mc = QFormLayout(mc_content)
+        layout_mc.setSpacing(15)
+        layout_mc.setContentsMargins(15, 15, 15, 15)
+        layout_mc.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+        self.mc_years_input = QSpinBox()
+        self.mc_years_input.setRange(1, 30)
+        
+        self.mc_sims_input = QComboBox()
+        self.mc_sims_input.addItems(["1000", "10000", "50000", "100000"])
+        
+        self.jump_threshold_input = QDoubleSpinBox()
+        self.jump_threshold_input.setRange(1.0, 10.0)
+        self.jump_threshold_input.setSingleStep(0.5)
+        self.jump_threshold_input.setSuffix(" \u03c3 (Sigma)")
+        self.jump_threshold_input.setToolTip("Sets the standard deviation multiplier to identify historical market crashes. Lower = more sensitive.")
+
+        layout_mc.addRow(QLabel("Default Years:"), self.mc_years_input)
+        layout_mc.addRow(QLabel("Default Simulations:"), self.mc_sims_input)
+        layout_mc.addRow(QLabel("Jump Threshold:"), self.jump_threshold_input)
+
+        tab_mc.setWidget(mc_content)
+        self.tabs.addTab(tab_mc, "Monte Carlo")
+
+        # ── TAB 4: AI Configuration ───────────────────────────────────
+
+        tab_ai = QScrollArea()
+        tab_ai.setWidgetResizable(True)
+        tab_ai.setStyleSheet(scroll_style)
+        
+        ai_content = QWidget()
+        ai_content.setStyleSheet(content_style)
+        layout_ai = QFormLayout(ai_content)
+        layout_ai.setSpacing(15)
+        layout_ai.setContentsMargins(15, 15, 15, 15)
+        layout_ai.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+        self.api_key_input = QLineEdit()
+        self.api_key_input.setEchoMode(QLineEdit.Password)
+        self.api_key_input.setMinimumWidth(300)
+
+        self.model_input = QLineEdit()
+        
+        self.language_input = QComboBox()
+        self.language_input.addItems(["English", "Italiano", "Español", "Français", "Deutsch"])
+
+        layout_ai.addRow(QLabel("Gemini API Key:"), self.api_key_input)
+        layout_ai.addRow(QLabel("AI Model:"), self.model_input)
+        layout_ai.addRow(QLabel("AI Output Language:"), self.language_input)
+
+        tab_ai.setWidget(ai_content)
+        self.tabs.addTab(tab_ai, "AI Configuration")
+
+        main_layout.addSpacing(20)
+
         btn_layout = QHBoxLayout()
         self.save_btn = QPushButton("Save Settings")
         self.save_btn.setObjectName("primary_btn")
@@ -173,7 +221,7 @@ class SettingsPage(QWidget):
         btn_layout.addStretch()
         btn_layout.addWidget(self.save_btn)
         main_layout.addLayout(btn_layout)
-
+        
     def load_settings(self):
         """
         Reads `config.json` and populates the UI input fields.

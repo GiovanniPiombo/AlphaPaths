@@ -646,3 +646,38 @@ QSlider::handle:horizontal {
     margin: -5px 0;
     border-radius: 7px;
 }
+
+/* ── TABWIDGET ────────────────────────────────────────────── */
+
+QTabWidget::pane {
+    background-color: #0D1117;
+    border: 1px solid #1E2733;
+    top: -1px;
+    border-radius: 0px 0px 6px 6px;
+}
+
+QTabBar::tab {
+    background-color: #080C12;
+    color: #5A6878;
+    border: 1px solid #1E2733;
+    padding: 9px 20px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-right: 2px;
+    border-radius: 4px 4px 0px 0px;
+}
+
+QTabBar::tab:selected {
+    background-color: #0D1117;
+    color: #E8EDF5;
+    border-bottom: 2px solid #F0A500; 
+}
+
+QTabBar::tab:!selected {
+    border-bottom: 1px solid #1E2733; 
+}
+
+QTabBar::tab:hover:!selected {
+    background-color: #0F1820;
+    color: #C8D0DC;
+}
