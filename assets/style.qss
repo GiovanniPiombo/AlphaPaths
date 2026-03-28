@@ -550,3 +550,99 @@ QCheckBox::indicator:hover,
 QTableWidget::indicator:hover {
     border-color: #3A5068;
 }
+
+/* Top Page Title */
+QLabel#sim_page_title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #E8EDF5;
+    letter-spacing: -0.5px;
+}
+
+/* Minimal KPI Labels (Top Bar) */
+QLabel#kpi_title {
+    color: #8A99A8;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+QLabel#kpi_value {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+/* Right Panel Section Titles (Simulated Outcomes, AI Insight) */
+QLabel#scenario_section_title {
+    color: #8A99A8;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 2px;
+}
+
+QLabel#ai_section_title {
+    font-size: 11px;
+    font-weight: bold;
+    color: #E8EDF5;
+    letter-spacing: 1.5px;
+}
+
+/* Custom Scenario Rows */
+QLabel#scenario_row_title {
+    font-size: 11px;
+    font-weight: 600;
+    background: transparent;
+    border: none;
+}
+
+QLabel#scenario_row_val {
+    color: #FFFFFF;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 22px;
+    font-weight: bold;
+    background: transparent;
+    border: none;
+}
+
+QLabel#scenario_row_icon {
+    font-size: 24px;
+    font-family: 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+    background: transparent;
+    border: none;
+}
+
+/* Bottom Controls Labels (Slider & Combo Box headers) */
+QLabel#control_label {
+    color: #8A99A8;
+    font-size: 10px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+QLabel#control_value {
+    color: #E8EDF5;
+    font-size: 12px;
+    font-weight: bold;
+    font-family: 'Consolas', monospace;
+}
+
+/* Sliders (QSlider) */
+QSlider::groove:horizontal {
+    border-radius: 2px;
+    height: 4px;
+    background: #2A3A4A;
+}
+
+QSlider::sub-page:horizontal {
+    background: #F0A500;
+    border-radius: 2px;
+}
+
+QSlider::handle:horizontal {
+    background: #F0A500;
+    width: 14px;
+    height: 14px;
+    margin: -5px 0;
+    border-radius: 7px;
+}

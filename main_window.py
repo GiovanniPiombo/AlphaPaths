@@ -144,9 +144,13 @@ class MainWindow(QMainWindow):
                 btn.setChecked(False)
         active_button.setChecked(True)
 
+        if index == 1:
+            self.simulation_page.set_dashboard_data(self.shared_portfolio_data)
+
     def on_dashboard_ready(self):
         """Called when IBKR data is successfully loaded in the dashboard."""
         app_logger.info("MainWindow: Dashboard data received. Merging into shared cache.")
+        self.simulation_page.set_dashboard_data(self.shared_portfolio_data)
         self.shared_portfolio_data.update(self.dashboard_page.cached_data)
         self.simulation_page.start_background_preload()
 

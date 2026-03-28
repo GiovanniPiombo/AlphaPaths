@@ -219,7 +219,10 @@ class DashboardPage(QWidget):
             "currency": data['currency'],
             "risky_weight": data['risky_weight'],
             "cash_weight": data['cash_weight'],
-            "positions": data['positions']
+            "positions": data['positions'],
+            "nlv": data['nlv'],
+            "cash": data['cash'],
+            "pnl": data['pnl']
         }
         self.dashboard_refreshed.emit()
 
