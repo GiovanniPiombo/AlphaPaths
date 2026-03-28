@@ -310,6 +310,7 @@ class SettingsPage(QWidget):
         self.ibkr_port_input.setEnabled(is_ibkr)
         self.ibkr_client_id_input.setEnabled(is_ibkr)
         self.ibkr_timeout_input.setEnabled(is_ibkr)
+        self.pacing_limit.setEnabled(is_ibkr)
 
         is_crypto = (text == "Crypto Exchange")
         self.crypto_exchange_input.setEnabled(is_crypto)
