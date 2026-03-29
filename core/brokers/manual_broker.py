@@ -99,16 +99,27 @@ class ManualBroker(BaseBroker):
             
             yf_data = yf.download(self.risky_assets, period="5d", progress=False)
             
+            yf_data.ffill(inplace=True)
+            
             for pos in raw_positions:
                 sym = pos["ticker"]
                 qty = float(pos["quantity"])
                 
-                if len(self.risky_assets) == 1:
-                    current_price = float(yf_data['Close'].iloc[-1])
-                    prev_close = float(yf_data['Close'].iloc[-2])
-                else:
-                    current_price = float(yf_data['Close'][sym].iloc[-1])
-                    prev_close = float(yf_data['Close'][sym].iloc[-2])
+                try:
+                    if len(self.risky_assets) == 1:
+                        current_price = float(yf_data['Close'].iloc[-1])
+                        prev_close = float(yf_data['Close'].iloc[-2])
+                    else:
+                        current_price = float(yf_data['Close'][sym].iloc[-1])
+                        prev_close = float(yf_data['Close'][sym].iloc[-2])
+                    
+                    if pd.isna(current_price):
+                        app_logger.warning(f"ManualBroker: Missing data for {sym}. Setting price to 0.")
+                        current_price, prev_close = 0.0, 0.0
+
+                except Exception as e:
+                    app_logger.error(f"ManualBroker: Error extracting price for {sym}: {e}")
+                    current_price, prev_close = 0.0, 0.0
                 
                 try:
                     native_currency = yf.Ticker(sym).fast_info['currency']
@@ -134,11 +145,11 @@ class ManualBroker(BaseBroker):
         for pos in positions_for_ui:
             sym = pos[0]
             mkt_val = pos[3]
-            weight = (mkt_val / self.total_value) if self.total_value > 0 else 0
+            weight = (mkt_val / self.total_value) if self.total_value > 0 else 0.0
             self.weights_dict[sym] = weight
             
         self.sum_risky_weights = sum(self.weights_dict.values())
-        cash_weight = (self.cash_value_base / self.total_value) if self.total_value > 0 else 0
+        cash_weight = (self.cash_value_base / self.total_value) if self.total_value > 0 else 0.0
 
         return {
             "nlv": self.total_value,
