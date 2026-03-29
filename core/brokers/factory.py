@@ -1,6 +1,7 @@
 from core.brokers.ibkr_broker import IBKRBroker
 from core.brokers.manual_broker import ManualBroker
 from core.brokers.crypto_broker import CryptoBroker
+from core.brokers.alpaca_broker import AlpacaBroker
 from core.utils import read_json
 from core.path_manager import PathManager
 from core.logger import app_logger
@@ -27,6 +28,10 @@ class BrokerFactory:
             port = read_json(PathManager.CONFIG_FILE, "IBKR_PORT") or 4001
             client_id = read_json(PathManager.CONFIG_FILE, "IBKR_CLIENT_ID") or 1
             return IBKRBroker(host=host, port=port, client_id=client_id)
+
+        elif active_broker == "Alpaca":
+            app_logger.info("BrokerFactory: Initializing AlpacaBroker.")
+            return AlpacaBroker()
         
         elif active_broker == "Crypto Exchange":
             app_logger.info("BrokerFactory: Initializing CryptoBroker (CCXT).")

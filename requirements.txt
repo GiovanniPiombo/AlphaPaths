@@ -12,3 +12,4 @@ scipy>=1.10.0
 pyarrow>=23.0.1
 yfinance
 ccxt
+alpaca-py

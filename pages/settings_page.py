@@ -66,7 +66,7 @@ class SettingsPage(QWidget):
 
         # Main Broker Settings
         self.active_broker_input = QComboBox()
-        self.active_broker_input.addItems(["Interactive Brokers", "Crypto Exchange", "Manual (Yahoo Finance)"])
+        self.active_broker_input.addItems(["Interactive Brokers", "Alpaca", "Crypto Exchange", "Manual (Yahoo Finance)"])
         self.active_broker_input.currentTextChanged.connect(self.toggle_broker_fields)
         
         self.currency_input = QComboBox()
@@ -84,6 +84,13 @@ class SettingsPage(QWidget):
         self.ibkr_timeout_input.setSuffix(" sec")
         self.pacing_limit = QSpinBox()
         self.pacing_limit.setRange(1, 20)
+        
+        # Alpaca Fields
+        self.alpaca_api_input = QLineEdit()
+        self.alpaca_api_input.setEchoMode(QLineEdit.Password)
+        self.alpaca_secret_input = QLineEdit()
+        self.alpaca_secret_input.setEchoMode(QLineEdit.Password)
+        self.alpaca_testnet_input = QCheckBox("Enable Paper Trading")
 
         # Crypto Fields
         self.crypto_exchange_input = QLineEdit()
@@ -109,6 +116,14 @@ class SettingsPage(QWidget):
         layout_broker.addRow(QLabel("Client ID:"), self.ibkr_client_id_input)
         layout_broker.addRow(QLabel("Data Timeout:"), self.ibkr_timeout_input)
         layout_broker.addRow(QLabel("Pacing Limit:"), self.pacing_limit)
+
+        # Separator for Alpaca
+        alpaca_label = QLabel("Alpaca")
+        alpaca_label.setStyleSheet("color: gray; font-style: italic; margin-top: 10px; margin-bottom: 5px;")
+        layout_broker.addRow(alpaca_label)
+        layout_broker.addRow(QLabel("API Key:"), self.alpaca_api_input)
+        layout_broker.addRow(QLabel("Secret Key:"), self.alpaca_secret_input)
+        layout_broker.addRow(QLabel("Paper Trading:"), self.alpaca_testnet_input)
 
         # Separator for Crypto
         crypto_label = QLabel("Crypto Exchange")
@@ -251,6 +266,10 @@ class SettingsPage(QWidget):
             self.ibkr_client_id_input.setValue(config.get("IBKR_CLIENT_ID", 1))
             self.ibkr_timeout_input.setValue(config.get("IBKR_TIMEOUT", 5.0))
             
+            self.alpaca_api_input.setText(config.get("ALPACA_API_KEY", ""))
+            self.alpaca_secret_input.setText(config.get("ALPACA_SECRET_KEY", ""))
+            self.alpaca_testnet_input.setChecked(config.get("USE_TESTNET", True))
+            
             self.crypto_exchange_input.setText(config.get("CRYPTO_EXCHANGE", "alpaca"))
             self.crypto_api_input.setText(config.get("CRYPTO_API_KEY", ""))
             self.crypto_secret_input.setText(config.get("CRYPTO_SECRET", ""))
@@ -285,16 +304,26 @@ class SettingsPage(QWidget):
         config["DISPLAY_CURRENCY"] = self.currency_input.currentText()
 
         config["ACTIVE_BROKER"] = self.active_broker_input.currentText()
+        
         config["IBKR_HOST"] = self.ibkr_host_input.text().strip()
         config["IBKR_PORT"] = self.ibkr_port_input.value()
         config["IBKR_CLIENT_ID"] = self.ibkr_client_id_input.value()
         config["IBKR_TIMEOUT"] = self.ibkr_timeout_input.value()
         
+        # Alpaca Saving
+        config["ALPACA_API_KEY"] = self.alpaca_api_input.text().strip()
+        config["ALPACA_SECRET_KEY"] = self.alpaca_secret_input.text().strip()
+        
         config["CRYPTO_EXCHANGE"] = self.crypto_exchange_input.text().strip()
         config["CRYPTO_API_KEY"] = self.crypto_api_input.text().strip()
         config["CRYPTO_SECRET"] = self.crypto_secret_input.text().strip()
-        config["USE_TESTNET"] = self.crypto_testnet_input.isChecked()
         config["CRYPTO_DUST_THRESHOLD"] = self.crypto_dust_input.value()
+        
+        # Handle shared Testnet key based on the active broker
+        if self.active_broker_input.currentText() == "Alpaca":
+            config["USE_TESTNET"] = self.alpaca_testnet_input.isChecked()
+        else:
+            config["USE_TESTNET"] = self.crypto_testnet_input.isChecked()
 
         if write_json(PathManager.CONFIG_FILE, config):
             app_logger.info("User settings saved successfully.")
@@ -311,6 +340,11 @@ class SettingsPage(QWidget):
         self.ibkr_client_id_input.setEnabled(is_ibkr)
         self.ibkr_timeout_input.setEnabled(is_ibkr)
         self.pacing_limit.setEnabled(is_ibkr)
+
+        is_alpaca = (text == "Alpaca")
+        self.alpaca_api_input.setEnabled(is_alpaca)
+        self.alpaca_secret_input.setEnabled(is_alpaca)
+        self.alpaca_testnet_input.setEnabled(is_alpaca)
 
         is_crypto = (text == "Crypto Exchange")
         self.crypto_exchange_input.setEnabled(is_crypto)
