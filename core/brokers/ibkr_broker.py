@@ -197,7 +197,7 @@ class IBKRBroker(BaseBroker):
             "sum_risky_weights": self.sum_risky_weights    
         }
 
-    async def fetch_historical_data(self, cache_file: str = "data/historical_prices_cache.parquet") -> pd.DataFrame:
+    async def fetch_historical_data(self, cache_file: str = "data/IBKR_prices_cache.parquet") -> pd.DataFrame:
         """
         Downloads daily adjusted closing prices for all risky assets from IBKR.
         Utilizes local caching to minimize API requests and prevent pacing violations.

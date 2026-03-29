@@ -70,9 +70,9 @@ class PortfolioManager:
         
         return data
 
-    async def fetch_historical_data(self, cache_file: str = "data/historical_prices_cache.parquet") -> pd.DataFrame:
+    async def fetch_historical_data(self, **kwargs) -> pd.DataFrame:
         """Delegates the historical data fetching to the active broker."""
-        return await self.broker.fetch_historical_data(cache_file=cache_file)
+        return await self.broker.fetch_historical_data(**kwargs)
 
     # ── MATHEMATICAL UTILITIES ──────────────────────────────────
     @staticmethod
