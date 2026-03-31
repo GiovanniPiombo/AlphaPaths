@@ -169,7 +169,7 @@ class AlpacaBroker(BaseBroker):
                     cached_df = pd.DataFrame()
                 else:
                     last_date = cached_df.index.max()
-                    today = pd.Timestamp.now(tz="UTC").normalize()
+                    today = pd.Timestamp.now(tz="UTC").normalize().tz_localize(None)
                     days_missing = (today - last_date).days
 
                     if days_missing <= 0:
