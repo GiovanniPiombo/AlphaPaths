@@ -1,15 +1,15 @@
-# IBKR Portfolio Analyzer
+# AlphaPaths
 
 [![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
 [![PySide6](https://img.shields.io/badge/GUI-PySide6-green)]()
-[![IBKR](https://img.shields.io/badge/IBKR-API-orange)]()
+[![Multi-Broker](https://img.shields.io/badge/Broker-IBKR%20%7C%20Alpaca%20%7C%20Crypto%20%7C%20Manual-orange)]()
 [![Yahoo Finance](https://img.shields.io/badge/yfinance-Market%20Data-blueviolet)]()
 [![Tests](https://github.com/GiovanniPiombo/ibkr-portfolio-analyzer/actions/workflows/tests.yml/badge.svg)](https://github.com/GiovanniPiombo/ibkr-portfolio-analyzer/actions/workflows/tests.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A professional-grade desktop application for advanced risk analysis and Monte Carlo simulation of financial portfolios. It features a modular broker architecture that allows users to either connect directly to **Interactive Brokers (IBKR)** for real-time account syncing or use a **Manual Mode (Yahoo Finance)** for universal portfolio tracking without requiring a brokerage account.
+AlphaPaths is a professional-grade desktop application for advanced risk analysis, Monte Carlo simulation, and portfolio optimization. It features a modular multi-broker architecture that supports direct connections to Interactive Brokers (IBKR), Alpaca, and major Crypto Exchanges (via CCXT), or a fully functional Manual Mode using Yahoo Finance—making it accessible to any investor, regardless of their brokerage.
 
-The platform calculates future projections using stochastic models (Geometric Brownian Motion & Merton Jump-Diffusion) and provides intelligent, conversational feedback via Google's Gemini AI. Built with a clean, decoupled architecture (PySide6, QThread, and pure Python logic), it ensures a high-performance, responsive experience for complex financial modeling.
+The platform projects future portfolio values using stochastic models (Geometric Brownian Motion & Merton Jump-Diffusion), applies Modern Portfolio Theory (MPT) to generate efficient frontiers with Core-Satellite constraints, and provides intelligent conversational feedback via Google's Gemini AI.
 
 ## Preview
 
@@ -19,15 +19,15 @@ The platform calculates future projections using stochastic models (Geometric Br
 
 ## Key Features
 
-*   **Direct IBKR Integration:** Automatically downloads real portfolio data (Net Liquidation Value, Cash, Positions, Daily P&L) via the `ib_async` library. Supports multi-currency portfolios with automatic FX conversion.
+*   **Universal Broker Architecture:** Connect to your real account via Interactive Brokers, Alpaca (stocks & crypto), or any CCXT-compatible crypto exchange (Binance, Kraken, etc.). For those without a brokerage account, the Manual Broker reads a simple JSON file and fetches real-time prices and historical data from Yahoo Finance, with automatic FX conversion.
+*   **Multi-Broker Settings:** A dedicated settings page allows you to manage credentials for all brokers and switch between them seamlessly without editing configuration files manually.
 *   **Monte Carlo Simulation:** Uses Geometric Brownian Motion to project thousands of possible future portfolio paths. Calculates key scenarios: Worst Case (5th percentile), Median (50th), and Best Case (95th).
-*   **AI-Powered Insights:** Sends your portfolio composition and simulation results to Google's Gemini API, generating a structured, natural language report with personalized observations and suggestions.
-*   **Optimized Performance:** Employs a multi-threaded architecture to keep the UI responsive. Uses a "FastMathWorker" to instantly recalculate simulations from cached risk metrics without re-fetching historical data.
-*   **Professional UI:** Clean, dark-themed interface inspired by Bloomberg terminals, built with PySide6 and custom QSS styling.
-*   **Interactive Visualizations:** Dynamic Qcharts embedded in the UI display the simulation cone, with background paths and clearly highlighted percentile lines. The simulation graph supports interactive features including zoom clamping, rubber-band selection, and mouse wheel zoom for detailed analysis of projection paths.
-*   **Merton Jump-Diffusion Stress Testing:** Extends standard GBM simulations by incorporating discrete price jumps (Poisson processes) to model sudden market crashes and extreme tail events, providing a more conservative risk assessment.
-*   **Core-Satellite Portfolio Optimization:** Applies Modern Portfolio Theory (MPT) to calculate the Efficient Frontier and Maximum Sharpe Ratio portfolio. Allows users to "lock" strategic core asset
-*   **Universal Portfolio Support (No Broker Required):** Don't use Interactive Brokers? No problem. The application features a dynamic broker architecture with a built-in `ManualBroker` adapter. It reads your holdings from a simple local JSON file and leverages Yahoo Finance (`yfinance`) to instantly fetch real-time market prices, 5-year historical data, and perform automatic FX conversions, making the app accessible to any investor right out of the box.
+*   **Merton Jump-Diffusion Stress Testing:** Extends standard GBM by incorporating discrete price jumps (Poisson processes) to model sudden market crashes and extreme tail events, providing a more conservative risk assessment. Parameters are automatically calibrated from your portfolio's historical data using a configurable Jump Threshold.
+*   **Core-Satellite Portfolio Optimization:** Applies Modern Portfolio Theory (MPT) to calculate the Efficient Frontier and Maximum Sharpe Ratio portfolio. The unique "Core-Satellite" feature allows you to "lock" strategic core assets (e.g., a broad-market ETF) at their current weight, forcing the optimizer to only reallocate the remaining "satellite" positions, perfect for maintaining long-term strategic allocations while tactically optimizing the rest.
+*   **AI-Powered Insights:** Sends your portfolio composition and simulation results to Google's Gemini API, generating a structured, natural language report with personalized observations and suggestions. The prompt template is fully customizable and supports multiple languages.
+*   **Optimized Performance:** Employs a multi-threaded architecture (QThread) to keep the UI responsive. Uses a FastMathWorker to instantly recalculate simulations from cached risk metrics without re-fetching historical data.
+*   **Professional UI:** Clean, dark-themed interface, built with PySide6 and custom QSS styling.
+*   **Interactive Visualizations:** Dynamic QCharts embedded in the UI display the simulation cone (with background paths and highlighted percentile lines) and the Efficient Frontier. The simulation graph supports zoom clamping, rubber-band selection, and mouse wheel zoom for detailed analysis of projection paths.
 
 ## Project Structure
 
@@ -41,10 +41,9 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 │
 ├── pages/                           # UI SCREENS: Each file represents a tab in the application.
 │   ├── dashboard_page.py            # Displays portfolio summary (NLV, Cash, PnL) and open positions. Triggers IBKRWorker.
-│   ├── simulation_page.py           # Monte Carlo controls (years, simulations). Displays results on a graph. Manages SimulationWorker and FastMathWorker.
+│   ├── simulation_page.py           # Monte Carlo controls (years, simulations). Displays results and AI's feedback. Manages SimulationWorker and FastMathWorker.
 │   ├── settings_page.py             # Settings Page
-│   ├── optimization_page.py         # Portfolio optimization interface. Displays Efficient Frontier and actionable trade recommendations.
-│   └── ai_page.py                   # Displays the AI-generated report. Triggers AIWorker.
+│   └── optimization_page.py         # Portfolio optimization interface. Displays Efficient Frontier and actionable trade recommendations.
 │
 ├── workers/                         # BACKGROUND THREADS: Bridge between the UI and the Core logic.
 │   ├── data_sync_thread.py          # DataSyncWorker: Fetches live portfolio data via the active broker.
@@ -57,6 +56,8 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 │   │   ├── factory.py               # BrokerFactory: Instantiates the correct broker dynamically.
 │   │   ├── base_broker.py           # BaseBroker: Abstract interface for all broker adapters.
 │   │   ├── ibkr_broker.py           # IBKRBroker: Adapter for Interactive Brokers API.
+│   │   ├── alpaca_broker.py         # Alpaca API (stocks & crypto via fallback) implementation.
+│   │   ├── crypto_broker.py         # Generic crypto exchange (CCXT) implementation.
 │   │   └── manual_broker.py         # ManualBroker: Adapter for Yahoo Finance & local JSON.
 │   ├── portfolio.py                 # PortfolioManager: The brain of the app. Agnostic to the specific broker.
 │   ├── gbm_model.py                 # GBMSimulator: The mathematical engine. Runs vectorized GBM simulations using NumPy.
@@ -80,7 +81,8 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 │
 ├── components/                      # Components
 │   ├── chart_widget                 # Montecarlo Simulation QChart
-│   └── markowitz_chart.py           # MarkowitzChartView: Custom QChartView for Efficient Frontier rendering.
+│   ├── markowitz_chart.py           # MarkowitzChartView: Custom QChartView for Efficient Frontier rendering.
+│   └── ai_widget.py                 # AIInsightWidget: Reusable component for displaying AI analysis.
 │
 ├── .github/                         # GITHUB ACTIONS
 │   └── workflows/
@@ -101,7 +103,10 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 - GUI Framework: PySide6 (Qt for Python)
 - Data & Math: Pandas, NumPy, SciPy
 - Visualization: Qt Charts (PySide6)
-- Broker Integration: IBKR API (ib_async)
+- Broker Integration:
+  - Interactive Brokers: ib_async
+  - Alpaca: alpaca-py
+  - Crypto Exchanges: ccxt
 - Market Data (Manual Mode): Yahoo Finance (yfinance)
 - Artificial Intelligence: Google Gemini API (google-generativeai)
 - Testing: Pytest
@@ -118,7 +123,7 @@ If you are on Windows and want a quick setup without dealing with Python environ
 2. Run the installer and follow the on-screen instructions provided by Inno Setup.
 3. Launch the application directly from your Start Menu or Desktop shortcut.
 
-*Note: You will still need a running instance of IBKR Trader Workstation (TWS) or IB Gateway, and a Google AI Studio API key to configure the app after installation.*
+*Note: You will need an API key for your chosen broker(s) and a Google AI Studio API key to configure the app after installation.*
 
 ### Option 2: Development & Building from Source
 
@@ -128,15 +133,14 @@ Follow these steps if you want to run the application directly from the source c
 
 - Python 3.9 or higher installed on your system.
 - A Google AI Studio API key for the Gemini features.
-- (Optional) A running instance of IBKR Trader Workstation (TWS) or IB Gateway. If you don't use IBKR, the application defaults to the built-in Manual Broker (Yahoo Finance).
-- (Optional) Inno Setup installed, if you intend to build the Windows installer.
+- Credentials for your preferred broker(s) (IBKR, Alpaca, Crypto Exchange) if you intend to use them.
 
 #### 1. Running from Source
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/GiovanniPiombo/ibkr-portfolio-analyzer.git
-   cd ibkr-portfolio-analyzer
+   git clone https://github.com/GiovanniPiombo/AlphaPaths.git
+   cd AlphaPaths
    ```
    
 2. **Create and activate a virtual environment (recommended):**
@@ -159,11 +163,13 @@ Follow these steps if you want to run the application directly from the source c
    
 4. **Configure the application:**
    
-   - Copy the `config.template.json` file and rename it to `config.json`.
-   - Open `config.json` (or use the Settings page in the app) to configure:
-     - **Gemini API Key:** Enter your Google AI Studio API key (required for AI Insights).
-     - **IBKR Connection:** Verify host, port, and client ID (only if using Interactive Brokers).
-     - **Simulation Defaults:** Adjust risk-free rate and other parameters.
+   Edit config.json (or use the Settings page in the app) to configure:
+   - **Gemini API Key:** Your Google AI Studio API key (required for AI Insights).
+   - **Active Broker:** Select from "Interactive Brokers", "Alpaca", "Crypto Exchange", or "Manual (Yahoo Finance)".
+   - **Broker Credentials:** Enter the specific API keys and settings for your chosen broker.
+   - **Simulation Defaults:** Adjust risk-free rate, lookback period, jump threshold, etc.
+
+   Edit manual_portfolio.json (if using Manual Broker) to define your holdings using Yahoo Finance tickers.
      
 5. **Run the application:**
    
@@ -196,7 +202,7 @@ The application can be packaged into a single executable file using PyInstaller,
 3. **Locate the executable:**
    
    - The built executable will be in the dist/ folder.
-   - On Windows: dist/IBKR Portfolio Analyzer.exe
+   - On Windows: dist/AlphaPaths.exe
    - The build includes application icons (Icon.ico, Icon.png, IconSetup.ico) embedded in the executable and used for the window icon.
      
 ##### What the Build Includes
@@ -212,9 +218,10 @@ The application can be packaged into a single executable file using PyInstaller,
 1. Launch the executable - The application will start with default placeholder values.
 2. Navigate to the Settings page - Access the dedicated settings interface
 3. Configure required parameters:
-   - Gemini API Key: Enter your Google AI Studio API key (required for AI Insights feature)
-   - IBKR Connection: Verify host (default: 127.0.0.1), port (default: 4002), and client ID (default: 1)
-   - Simulation Defaults: Adjust risk-free rate and other parameters as needed
+   - **Gemini API Key:** Your Google AI Studio API key (required for AI Insights).
+   - **Active Broker:** Select from "Interactive Brokers", "Alpaca", "Crypto Exchange", or "Manual (Yahoo Finance)".
+   - **Broker Credentials:** Enter the specific API keys and settings for your chosen broker.
+   - **Simulation Defaults:** Adjust risk-free rate, lookback period, jump threshold, etc.
 4. Save settings - The configuration is automatically saved to config.json in the executable's directory.
    
 **Note**: The first-time user must supply their own Gemini API key. The application does not include any pre-configured keys
@@ -222,19 +229,17 @@ The application can be packaged into a single executable file using PyInstaller,
 ### How to use
 
 #### Choosing your Broker
-By default, the application is set to use the **Manual Broker (Yahoo Finance)**, which requires no API keys and is ready out-of-the-box:
-1. Copy the provided `manual_portfolio.template.json` in the root directory and rename it to `manual_portfolio.json`.
-2. Edit this file to define your base currency, cash balance, and positions using standard Yahoo Finance tickers (e.g., `"AAPL"`, `"VWCE.DE"`, `"BTC-USD"`).
-3. The app will automatically fetch real-time prices, historical data, and handle FX conversions.
-
-*(Note: To connect your real Interactive Brokers account, go to the **Settings** tab, select "Interactive Brokers" as the Active Broker, and ensure TWS/Gateway is running).*
+Navigate to the Settings tab. Select your preferred broker from the "Active Broker" dropdown and fill in the required credentials for that specific connection. The app will use this selection for all subsequent data fetches.
+- Interactive Brokers: Requires a running instance of TWS or IB Gateway. Configure the host, port, and client ID.
+- Alpaca: Enter your API and Secret keys. Check "Paper Trading" for testnet mode.
+- Crypto Exchange: Enter the CCXT exchange ID (e.g., binance, kraken), your API key, and secret. The app will automatically handle asset classification (cash vs. risky) and cross-pair price resolution.
+- Manual (Yahoo Finance): Define your portfolio in manual_portfolio.json. The app will fetch real-time prices and historical data directly from Yahoo Finance and perform automatic FX conversions.
 
 #### Interface Navigation
-* **Dashboard:** Upon starting, the app automatically connects to the active broker and fetches your portfolio data. Click the "Refresh Data" button to manually update.
-* **Simulation:** Navigate to the "Simulation" tab. The first time you visit, it will automatically start a background preload (fetching historical data and calculating base risk metrics). Once preloaded, you can adjust the years and number of simulations and click "Run Simulation" for instant results.
-* **Optimization:** After loading portfolio data, navigate to the "Optimization" tab. Select which assets you want to "lock" (core holdings) by checking the boxes in the table. Click "Run Optimization" to calculate the constrained Efficient Frontier and the optimal Max Sharpe portfolio. The page will display the improvement in Sharpe ratio and a detailed action table with Buy/Sell/Hold recommendations for each asset.
-* **AI Insights:** After running a simulation, go to the "AI Insights" tab. The AI analysis will trigger automatically, providing a detailed report on your portfolio's risk and potential.
-* **Settings:** A dedicated interface that allows you to configure Gemini API keys, IBKR connection parameters (host, port, client ID), and simulation defaults without manually editing the JSON file.
+- **Dashboard:** Upon starting, the app automatically connects to the active broker and fetches your portfolio data. Click "Refresh Data" to manually update.
+- **Simulation:** Navigate to the "Monte Carlo" tab. After the initial preload, adjust the years and number of simulations (using the intuitive sliders) and select the model type (Standard GBM or Merton Stress Test). Click "Run Simulation" to instantly see new projections.
+- **Optimization:** After loading portfolio data, go to the "Optimization" tab. Lock any assets you wish to keep as your core strategic holdings by checking the box in the table. Click "Run Optimization" to calculate the constrained Efficient Frontier and the optimal Max Sharpe portfolio. The page will display the improvement in Sharpe ratio and a detailed action table with Buy/Sell/Hold recommendations for each asset.
+- **AI Insights:** The AI analysis is displayed directly on the Simulation page. It automatically triggers after each simulation run, providing a detailed report on your portfolio's risk and potential in your preferred language.
 
 ## Core-Satellite Optimization
 
