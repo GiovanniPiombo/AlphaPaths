@@ -11,7 +11,7 @@ from core.logger import app_logger
 
 class MainWindow(QMainWindow):
     """
-    The primary application window for the IBKR Portfolio Analyzer.
+    The primary application window for the AlphaPath application.
 
     This class manages the high-level application state, handles navigation 
     between different analysis modules, and acts as a central data hub 
@@ -26,7 +26,7 @@ class MainWindow(QMainWindow):
     """
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("IBKR Portfolio Analyzer")
+        self.setWindowTitle("AlphaPath")
         self.resize(1200, 800)
 
         # Cache to hold data across pages
@@ -55,7 +55,7 @@ class MainWindow(QMainWindow):
         sidebar_layout.setSpacing(5)
 
         # ── Logo / Title ───────────────────────────────────────
-        logo_label = QLabel("IBKR ANALYZER")
+        logo_label = QLabel("ALPHA PATH")
         logo_label.setObjectName("logo_label")
         logo_label.setAlignment(Qt.AlignCenter)
         sidebar_layout.addWidget(logo_label)

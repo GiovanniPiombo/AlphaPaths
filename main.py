@@ -7,7 +7,7 @@ from PySide6.QtGui import QIcon
 from core.logger import app_logger
 
 if __name__ == "__main__":
-    app_logger.info("=== STARTING IBKR PORTFOLIO ANALYZER ===")
+    app_logger.info("=== STARTING ALPHAPATH ===")
     app = QApplication(sys.argv)
     if PathManager.STYLE_FILE.exists():
         with open(PathManager.STYLE_FILE, "r") as f:
