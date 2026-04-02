@@ -271,6 +271,8 @@ The core mathematical logic is thoroughly tested. To run the test suite:
 
 ## License & Commercial Use
 
+**Copyright © 2026 Giovanni Piombo Nicoli**
+
 AlphaPaths is strictly distributed under the **GNU General Public License v3.0 (GPLv3)**. 
 
 This means you are free to use, modify, and distribute this software for personal, academic, or open-source projects, provided that any derivative works are also open-sourced under the exact same GPLv3 license.

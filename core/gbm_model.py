@@ -1,3 +1,18 @@
+# AlphaPaths - Advanced risk analysis, Monte Carlo simulation, and portfolio optimization.
+# Copyright (C) 2026 Giovanni Piombo Nicoli
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import numpy as np
 
 TRADING_DAYS_PER_YEAR = 252
@@ -106,7 +121,7 @@ if __name__ == "__main__":
     years = 5            
 
     # Initialization and execution
-    simulator = MonteCarloSimulator(capital, mu, sigma, years)
+    simulator = GBMSimulator(capital, mu, sigma, years)
     simulated_prices = simulator.simulate()
     scenarios = simulator.get_scenarios(simulated_prices)
     

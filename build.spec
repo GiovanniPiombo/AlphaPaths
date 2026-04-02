@@ -14,6 +14,8 @@ a = Analysis(
         ('workers', 'workers'),
         ('config.json', '.'),
         ('prompts.json', '.')
+        ('LICENSE', '.'),
+        ('THIRDPARTY-NOTICES.txt', '.')
     ],
 
     hiddenimports=[

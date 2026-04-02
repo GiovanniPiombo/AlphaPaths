@@ -1,8 +1,24 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDoubleSpinBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QComboBox, QCheckBox, QTabWidget, QScrollArea
+# AlphaPaths - Advanced risk analysis, Monte Carlo simulation, and portfolio optimization.
+# Copyright (C) 2026 Giovanni Piombo Nicoli
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDoubleSpinBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QComboBox, QCheckBox, QTabWidget, QScrollArea, QDialog, QTextEdit
 from PySide6.QtCore import Qt
 from core.utils import read_json, write_json
 from core.path_manager import PathManager
 from core.logger import app_logger
+import os
 
 class SettingsPage(QWidget):
     """
@@ -244,6 +260,39 @@ class SettingsPage(QWidget):
 
         main_layout.addSpacing(20)
 
+        # ── TAB 5: About & Licenses ───────────────────────────────────
+        tab_about = QScrollArea()
+        tab_about.setWidgetResizable(True)
+        tab_about.setStyleSheet(scroll_style)
+        
+        about_content = QWidget()
+        about_content.setStyleSheet(content_style)
+        layout_about = QVBoxLayout(about_content)
+        layout_about.setSpacing(15)
+        layout_about.setContentsMargins(15, 15, 15, 15)
+        layout_about.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+
+        about_text = QLabel(
+            "<h2>AlphaPaths</h2>"
+            "<p>Advanced risk analysis, Monte Carlo simulation, and portfolio optimization.</p>"
+            "<p><b>Copyright &copy; 2026 Giovanni Piombo Nicoli</b></p>"
+            "<p><b>License:</b> GNU General Public License v3.0 (GPLv3)<br>"
+            "<i>For closed-source, commercial, or proprietary use, a separate Commercial License is required.</i></p>"
+            "<br><p>Built with <b>PySide6</b> (LGPLv3) and powered by open-source technologies<br>"
+            "including <b>NumPy</b>, <b>Pandas</b>, <b>SciPy</b>, <b>CCXT</b>, and <b>yfinance</b>.</p>"
+        )
+        about_text.setAlignment(Qt.AlignCenter)
+        
+        self.btn_show_licenses = QPushButton("View Third-Party Licenses")
+        self.btn_show_licenses.setFixedWidth(250)
+        self.btn_show_licenses.clicked.connect(self.show_licenses_dialog)
+
+        layout_about.addWidget(about_text)
+        layout_about.addWidget(self.btn_show_licenses, alignment=Qt.AlignCenter)
+
+        tab_about.setWidget(about_content)
+        self.tabs.addTab(tab_about, "About & Licenses")
+
         # ── BUTTONS ──────────────────────────────────────────────────
         btn_layout = QHBoxLayout()
         self.save_btn = QPushButton("Save Settings")
@@ -355,3 +404,32 @@ class SettingsPage(QWidget):
         self.ibkr_container.setVisible(text == "Interactive Brokers")
         self.alpaca_container.setVisible(text == "Alpaca")
         self.crypto_container.setVisible(text == "Crypto Exchange")
+
+    def show_licenses_dialog(self):
+        """Displays a dialog containing the contents of the THIRDPARTY-NOTICES.txt file."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Third-Party Licenses")
+        dialog.resize(700, 500)
+        
+        layout = QVBoxLayout(dialog)
+        
+        text_edit = QTextEdit()
+        text_edit.setReadOnly(True)
+        text_edit.setStyleSheet("font-family: Consolas, monospace; background-color: #1e1e1e; color: #d4d4d4;")
+        
+        file_path = "THIRDPARTY-NOTICES.txt"
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f:
+                text_edit.setPlainText(f.read())
+        else:
+            text_edit.setPlainText("Error: 'THIRDPARTY-NOTICES.txt' not found.\nPlease ensure the file is in the application directory.")
+            app_logger.error("THIRDPARTY-NOTICES.txt file is missing. Cannot display licenses dialog.")
+            
+        layout.addWidget(text_edit)
+        
+        btn_close = QPushButton("Close")
+        btn_close.setFixedWidth(100)
+        btn_close.clicked.connect(dialog.accept)
+        layout.addWidget(btn_close, alignment=Qt.AlignCenter)
+        
+        dialog.exec()
