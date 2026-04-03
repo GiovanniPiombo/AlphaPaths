@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QFrame, QMessageBox, QSlider
+from PySide6.QtWidgets import QWidget, QSizePolicy, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox, QFrame, QMessageBox, QSlider
 from PySide6.QtCore import Qt, Signal
 from workers.simulation_thread import SimulationWorker, FastMathWorker
 from components.ai_widget import AIInsightWidget
@@ -104,7 +104,9 @@ class SimulationPage(QWidget):
         chart_layout.setContentsMargins(20, 20, 20, 20)
         
         self.chart_view = MonteCarloChartView(self)
-        self.chart_view.setMinimumHeight(350)
+        self.chart_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.chart_view.setMinimumSize(450, 350)
+        
         chart_layout.addWidget(self.chart_view, stretch=1)
         
         middle_layout.addWidget(chart_frame, stretch=7)

@@ -136,6 +136,14 @@ Follow these steps if you want to run the application directly from the source c
 - A Google AI Studio API key for the Gemini features.
 - Credentials for your preferred broker(s) (IBKR, Alpaca, Crypto Exchange) if you intend to use them.
 
+#### Linux Dependencies
+If you are running the application on Linux, PySide6 (Qt6) requires the X11 cursor library to render the GUI correctly. If the app crashes on startup with a `qt.qpa.plugin` or `xcb` error, install the missing system library via your package manager:
+
+```bash
+sudo apt update
+sudo apt install libxcb-cursor0
+```
+
 #### 1. Running from Source
 
 1. **Clone the repository:**

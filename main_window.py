@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-from PySide6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel
+from PySide6.QtWidgets import QSizePolicy, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget, QLabel
 from PySide6.QtCore import Qt
 
 from pages.settings_page import SettingsPage
@@ -42,7 +42,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("AlphaPath")
-        self.resize(1200, 800)
+        self.resize(1400, 800)
 
         # Cache to hold data across pages
         self.shared_portfolio_data = {}
@@ -100,6 +100,8 @@ class MainWindow(QMainWindow):
 
         # ── STACKED WIDGET (PAGES) ────────────────────────────
         self.stacked_widget = QStackedWidget()
+
+        self.stacked_widget.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Expanding)
         
         self.dashboard_page = DashboardPage()
         self.simulation_page = SimulationPage()
