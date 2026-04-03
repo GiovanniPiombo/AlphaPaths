@@ -269,6 +269,14 @@ The core mathematical logic is thoroughly tested. To run the test suite:
    pytest tests/ -v
 ```
 
+## Contributing
+
+Contributions are welcome! Please read the [CONTRIBUTING.md](CONTRIBUTING.md) file for details on our code of conduct and the process for submitting pull requests, including mandatory CLA agreement for our dual-licensing model.
+
+## Disclaimer
+
+**AlphaPaths is NOT financial advice.** This software is provided for educational and analytical purposes only. Quantitative models, Monte Carlo simulations, and portfolio optimizations are based on historical data and mathematical assumptions that do not guarantee future results. Investing in financial markets involves significant risk of loss. Always consult with a qualified financial advisor before making any investment decisions. The author is not responsible for any financial losses incurred through the use of this software.
+
 ## License & Commercial Use
 
 **Copyright © 2026 Giovanni Piombo Nicoli**
