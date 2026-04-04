@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDoubleSpinBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QComboBox, QCheckBox, QTabWidget, QScrollArea, QDialog, QTextEdit
 from PySide6.QtCore import Qt
+from components.manual_portfolio_widget import ManualPortfolioWidget
 from core.utils import read_json, write_json
 from core.path_manager import PathManager
 from core.logger import app_logger
@@ -85,7 +86,7 @@ class SettingsPage(QWidget):
         self.active_broker_input.currentTextChanged.connect(self.toggle_broker_fields)
         
         self.currency_input = QComboBox()
-        self.currency_input.addItems(["AUTO (Broker Default)", "USD", "EUR", "GBP", "CHF"])
+        self.currency_input.addItems(["USD", "EUR", "GBP", "CHF"])
 
         # IBKR Fields
         self.ibkr_host_input = QLineEdit()
@@ -171,6 +172,27 @@ class SettingsPage(QWidget):
 
         tab_broker.setWidget(broker_content)
         self.tabs.addTab(tab_broker, "Broker Settings")
+
+        # ─── MANUAL CONTAINER ────────────────────────────────────────
+        self.manual_container = QWidget()
+        manual_layout = QFormLayout(self.manual_container)
+        manual_layout.setContentsMargins(0, 0, 0, 0)
+        manual_layout.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+        manual_label = QLabel("Manual Portfolio")
+        manual_label.setStyleSheet("color: gray; font-style: italic; margin-top: 10px; margin-bottom: 5px;")
+        manual_layout.addRow(manual_label)
+
+        self.manual_cash = QDoubleSpinBox()
+        self.manual_cash.setRange(0.0, 100000000.0)
+        self.manual_cash.setDecimals(2)
+
+        manual_layout.addRow(QLabel("Cash Balance:"), self.manual_cash)
+
+        self.manual_portfolio_table = ManualPortfolioWidget()
+        manual_layout.addRow(self.manual_portfolio_table)
+
+        layout_broker.addRow(self.manual_container)
 
         # ── TAB 2: Base Mathematics ───────────────────────────────────
         tab_math = QScrollArea()
@@ -320,7 +342,7 @@ class SettingsPage(QWidget):
             self.risk_free_input.setValue(config.get("RISK_FREE_RATE", 0.0) * 100)
             self.pacing_limit.setValue(config.get("PACING_LIMIT", 5))
             self.lookback_period.setValue(config.get("LOOKBACK_PERIOD", 5))
-            self.currency_input.setCurrentText(config.get("DISPLAY_CURRENCY", "AUTO (Broker Default)"))
+            self.currency_input.setCurrentText(config.get("DISPLAY_CURRENCY", "EUR"))
             
             self.mc_years_input.setValue(config.get("DEFAULT_YEARS", 5))
             self.mc_sims_input.setCurrentText(str(config.get("DEFAULT_SIMS", 10000)))
@@ -342,6 +364,15 @@ class SettingsPage(QWidget):
             self.crypto_secret_input.setText(config.get("CRYPTO_SECRET", ""))
             self.crypto_testnet_input.setChecked(config.get("USE_TESTNET", True))
             self.crypto_dust_input.setValue(config.get("CRYPTO_DUST_THRESHOLD", 0.0001))
+
+            m_data = read_json(PathManager.MANUAL_PORTFOLIO_FILE)
+            if m_data:
+                self.currency_input.setCurrentText(m_data.get("base_currency", "EUR"))
+                self.manual_cash.setValue(float(m_data.get("cash", 0.0)))
+        
+                self.manual_portfolio_table.clear()
+                for pos in m_data.get("positions", []):
+                    self.manual_portfolio_table.add_row(pos['ticker'], str(pos['quantity']))
 
             self.toggle_broker_fields(self.active_broker_input.currentText())
 
@@ -399,11 +430,19 @@ class SettingsPage(QWidget):
             app_logger.error("Could not save the config.json file from UI.")
             QMessageBox.critical(self, "Error", "Could not save the config.json file.")
 
+        portfolio_to_save = {
+            "base_currency": self.currency_input.currentText(),
+            "cash": self.manual_cash.value(),
+            "positions": self.manual_portfolio_table.get_positions()
+        }
+        write_json(PathManager.MANUAL_PORTFOLIO_FILE, portfolio_to_save)
+
     def toggle_broker_fields(self, text: str):
         """Shows or hides containers based on the currently selected broker."""
         self.ibkr_container.setVisible(text == "Interactive Brokers")
         self.alpaca_container.setVisible(text == "Alpaca")
         self.crypto_container.setVisible(text == "Crypto Exchange")
+        self.manual_portfolio_table.setVisible(text == "Manual (Yahoo Finance)")
 
     def show_licenses_dialog(self):
         """Displays a dialog containing the contents of the THIRDPARTY-NOTICES.txt file."""
