@@ -187,7 +187,8 @@ class ManualBroker(BaseBroker):
         all_prices = data['Close']
             
         all_prices.ffill(inplace=True)
-        all_prices.dropna(inplace=True)
+        all_prices.dropna(axis=1, how='all', inplace=True)
+        all_prices.dropna(axis=0, inplace=True)
         
         os.makedirs(os.path.dirname(cache_file), exist_ok=True)
         all_prices.to_parquet(cache_file)
