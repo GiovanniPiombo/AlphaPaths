@@ -17,6 +17,7 @@ import time
 from functools import wraps
 import json
 from core.logger import app_logger
+import yfinance as yf
 
 def read_json(file, parameter_name=None):
     """
@@ -117,3 +118,34 @@ def retry_with_backoff(max_retries: int = 3, base_delay: float = 2.0):
                         raise e
         return wrapper
     return decorator
+
+def get_invalid_tickers(tickers: list[str]) -> list[str]:
+    """
+    Validates a list of tickers using Yahoo Finance.
+    Downloads 5 days of history to verify existence, avoiding issues 
+    
+    Returns a list of invalid or unfound tickers.
+    """
+    invalid_tickers = []
+    
+    unique_tickers = list(set([t for t in tickers if t]))
+    
+    if not unique_tickers:
+        return []
+
+    app_logger.info(f"Validating tickers via Yahoo Finance: {unique_tickers}")
+    
+    for ticker in unique_tickers:
+        try:
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period="5d")
+            
+            if hist.empty:
+                app_logger.warning(f"Ticker validation failed: {ticker} not found or returned empty data.")
+                invalid_tickers.append(ticker)
+                
+        except Exception as e:
+            app_logger.error(f"Error during validation of {ticker}: {e}")
+            invalid_tickers.append(ticker)
+            
+    return invalid_tickers

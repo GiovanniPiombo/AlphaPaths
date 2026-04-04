@@ -13,10 +13,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDoubleSpinBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QComboBox, QCheckBox, QTabWidget, QScrollArea, QDialog, QTextEdit
+from PySide6.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDoubleSpinBox, QSpinBox, QPushButton, QFormLayout, QMessageBox, QComboBox, QCheckBox, QTabWidget, QScrollArea, QDialog, QTextEdit
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QCursor
 from components.manual_portfolio_widget import ManualPortfolioWidget
-from core.utils import read_json, write_json
+from core.utils import read_json, write_json, get_invalid_tickers
 from core.path_manager import PathManager
 from core.logger import app_logger
 import os
@@ -385,6 +386,26 @@ class SettingsPage(QWidget):
         Upon successful write, it prompts the user with a dialog recommending 
         an application restart to apply changes globally.
         """
+        if self.active_broker_input.currentText() == "Manual (Yahoo Finance)":
+            positions = self.manual_portfolio_table.get_positions()
+            tickers_to_check = [pos["ticker"] for pos in positions]
+            
+            if tickers_to_check:
+                QApplication.setOverrideCursor(Qt.WaitCursor)
+                invalid_tickers = get_invalid_tickers(tickers_to_check)
+                QApplication.restoreOverrideCursor()
+                
+                if invalid_tickers:
+                    msg = (f"The following tickers were not found on Yahoo Finance:\n\n"
+                           f"{', '.join(invalid_tickers)}\n\n"
+                           f"Are you sure you want to save anyway? This might cause errors during calculations.")
+                    
+                    reply = QMessageBox.warning(self, "Invalid Tickers Found", msg, 
+                                                QMessageBox.Yes | QMessageBox.No, 
+                                                QMessageBox.No)
+                    if reply == QMessageBox.No:
+                        return
+
         config = read_json(PathManager.CONFIG_FILE)
         if not isinstance(config, dict):
             config = {}
