@@ -179,6 +179,9 @@ class OptimizationPage(QWidget):
         symbols = self.metrics.get("symbols", [])
         self.curr_label.setText("0.00")
         self.opt_label.setText("0.00")
+        
+        self.delta_table.blockSignals(True) 
+        
         total_risky_value = sum([pos[3] for pos in self.positions if pos[0] in symbols])
         current_weights = {pos[0]: pos[3] / total_risky_value for pos in self.positions if pos[0] in symbols and total_risky_value > 0}
         
@@ -206,6 +209,8 @@ class OptimizationPage(QWidget):
             self.delta_table.setItem(row, 3, QTableWidgetItem("-"))
             self.delta_table.setItem(row, 4, QTableWidgetItem("-"))
 
+        self.delta_table.blockSignals(False)
+
     def get_locked_symbols(self) -> list:
         """
         Scans the interactive table to identify which assets the user has locked.
@@ -216,10 +221,12 @@ class OptimizationPage(QWidget):
         """
         locked = []
         for row in range(self.delta_table.rowCount()):
-            sym = self.delta_table.item(row, 0).text()
+            sym_item = self.delta_table.item(row, 0)
             check_item = self.delta_table.item(row, 2)
-            if check_item.checkState() == Qt.Checked:
-                locked.append(sym)
+            
+            if sym_item is not None and check_item is not None:
+                if check_item.checkState() == Qt.Checked:
+                    locked.append(sym_item.text())
         return locked
 
     def on_run_clicked(self):
