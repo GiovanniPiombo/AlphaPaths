@@ -38,7 +38,7 @@ class OptimizationWorker(QThread):
     error_occurred = Signal(str)
     progress_update = Signal(str)
 
-    def __init__(self, metrics: dict, positions: list, locked_symbols: list):
+    def __init__(self, metrics: dict, positions: list, locked_symbols: list, max_satellite_weight: float = 1.0):
         """
         Initializes the optimization worker with market data and user constraints.
 
@@ -49,11 +49,15 @@ class OptimizationWorker(QThread):
                 Expected format per item: [Ticker, Quantity, Current Price, Market Value]
             locked_symbols (list): A list of ticker strings (e.g., ['VWCE']) that the 
                 user wishes to freeze at their current portfolio weight.
+            max_satellite_weight (float): The maximum allowed weight for any single 
+                free asset (0.0 to 1.0). This prevents the optimizer from allocating
+                too much capital to any one free asset.
         """
         super().__init__()
         self.metrics = metrics
         self.positions = positions
         self.locked_symbols = locked_symbols
+        self.max_satellite_weight = max_satellite_weight
 
     def run(self):
         """
@@ -101,7 +105,7 @@ class OptimizationWorker(QThread):
                 if sym in self.locked_symbols:
                     bounds.append((cw, cw)) 
                 else:
-                    bounds.append((0.0, 1.0)) 
+                    bounds.append((0.0, self.max_satellite_weight))
             
             bounds_tuple = tuple(bounds)
             initial_array = np.array(initial_guess)
