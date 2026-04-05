@@ -18,6 +18,7 @@ import numpy as np
 from core.brokers.base_broker import BaseBroker
 from core.gbm_model import GBMSimulator
 from core.merton_model import MJDSimulator
+from core.garch_model import GARCHSimulator
 from core.ai_review import get_portfolio_analysis
 from core.utils import read_json
 from core.path_manager import PathManager
@@ -174,6 +175,11 @@ class PortfolioManager:
         annual_asset_returns = mean_daily_returns * self.TRADING_DAYS
         annual_cov_matrix = cov_matrix * self.TRADING_DAYS
 
+        alpha = 0.10
+        beta = 0.85
+        daily_variance = port_variance
+        omega = daily_variance * (1.0 - alpha - beta)
+
         return {
             "total_mu": self.total_portfolio_mu,
             "total_vol": self.total_portfolio_vol,
@@ -182,6 +188,10 @@ class PortfolioManager:
             "lam": lam,
             "m": m,
             "nu": nu,
+            "garch_omega": omega,
+            "garch_alpha": alpha,
+            "garch_beta": beta,
+            "garch_initial_var": daily_variance,
             "risky_capital": self.total_value * self.sum_risky_weights,
             "cash_capital": self.cash_value_base,
             "risk_free_rate": self.config_rf_rate,
@@ -225,6 +235,15 @@ class PortfolioManager:
         risky_merton_prices = merton_simulator.simulate()
         if metrics["risky_capital"] <= 0: risky_merton_prices *= 0
 
+        garch_simulator = GARCHSimulator(
+            capital=safe_capital, mu=metrics["risky_mu"], 
+            years=years, simulations=simulations,
+            omega=metrics["garch_omega"], alpha=metrics["garch_alpha"], 
+            beta=metrics["garch_beta"], initial_variance=metrics["garch_initial_var"]
+        )
+        risky_garch_prices = garch_simulator.simulate()
+        if metrics["risky_capital"] <= 0: risky_garch_prices *= 0
+
         dt = 1.0 / self.TRADING_DAYS
         steps = int(years * self.TRADING_DAYS)
         cash_growth = np.exp(metrics["risk_free_rate"] * dt * np.arange(steps + 1))
@@ -232,6 +251,7 @@ class PortfolioManager:
 
         risky_gbm_prices += cash_matrix
         risky_merton_prices += cash_matrix
+        risky_garch_prices += cash_matrix
         
         return {
             "gbm": {
@@ -241,6 +261,10 @@ class PortfolioManager:
             "merton": {
                 "scenarios": merton_simulator.get_scenarios(risky_merton_prices),
                 "prices": risky_merton_prices
+            },
+            "garch": {
+                "scenarios": garch_simulator.get_scenarios(risky_garch_prices),
+                "prices": risky_garch_prices
             }
         }
 
