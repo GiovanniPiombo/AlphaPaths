@@ -55,6 +55,7 @@ class SimulationPage(QWidget):
         self.cached_metrics = None
         self.cached_gbm_data = None
         self.cached_merton_data = None
+        self.cached_garch_data = None
         self.time_steps = None
         
         self.dashboard_data = {} 
@@ -180,7 +181,7 @@ class SimulationPage(QWidget):
         lbl_model = QLabel("MODEL TYPE")
         lbl_model.setObjectName("control_label")
         self.combo_model = QComboBox()
-        self.combo_model.addItems(["Standard GBM", "Merton Stress Test"])
+        self.combo_model.addItems(["Standard GBM", "Merton Stress Test", "GARCH Volatility"])
         self.combo_model.currentIndexChanged.connect(self.update_view)
         lay_model.addWidget(lbl_model)
         lay_model.addWidget(self.combo_model)
@@ -367,6 +368,7 @@ class SimulationPage(QWidget):
         self.cached_metrics = payload["metrics"]
         self.cached_gbm_data = payload["gbm"]
         self.cached_merton_data = payload["merton"]
+        self.cached_garch_data = payload["garch"]
         self.time_steps = payload["time_steps"]
         
         self.update_view()
@@ -386,6 +388,7 @@ class SimulationPage(QWidget):
         """
         self.cached_gbm_data = payload["gbm"]
         self.cached_merton_data = payload["merton"]
+        self.cached_garch_data = payload["garch"]
         self.time_steps = payload["time_steps"]
         
         self.update_view()
@@ -506,9 +509,14 @@ class SimulationPage(QWidget):
                 the background preload hasn't finished yet.
         """
         if not self.cached_gbm_data or not self.cached_merton_data: return None
-        if self.combo_model.currentText() == "Standard GBM": return self.cached_gbm_data
-        return self.cached_merton_data
-
+        if self.combo_model.currentText() == "Standard GBM": 
+            return self.cached_gbm_data
+        elif self.combo_model.currentText() == "Merton Stress Test": 
+            return self.cached_merton_data
+        elif self.combo_model.currentText() == "GARCH Volatility":
+            return self.cached_garch_data
+        return None
+    
     def get_sim_data(self):
         """
         Compiles and returns the current simulation results alongside dashboard data.
