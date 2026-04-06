@@ -265,17 +265,39 @@ class SettingsPage(QWidget):
         layout_ai.setContentsMargins(15, 15, 15, 15)
         layout_ai.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
+        # AI Provider Selector
+        self.ai_provider_input = QComboBox()
+        self.ai_provider_input.addItems(["Gemini", "Ollama"])
+        self.ai_provider_input.currentTextChanged.connect(self.toggle_ai_fields)
+
+        # Gemini Fields
         self.api_key_input = QLineEdit()
         self.api_key_input.setEchoMode(QLineEdit.Password)
         self.api_key_input.setMinimumWidth(300)
-
         self.model_input = QLineEdit()
         
+        # Ollama Fields
+        self.ollama_endpoint_input = QLineEdit()
+        self.ollama_endpoint_input.setText("http://localhost:11434")
+        self.ollama_model_input = QLineEdit()
+        self.ollama_model_input.setPlaceholderText("e.g. llama3, mistral")
+
         self.language_input = QComboBox()
         self.language_input.addItems(["English", "Italiano", "Español", "Français", "Deutsch"])
 
-        layout_ai.addRow(QLabel("Gemini API Key:"), self.api_key_input)
-        layout_ai.addRow(QLabel("AI Model:"), self.model_input)
+        layout_ai.addRow(QLabel("AI Provider:"), self.ai_provider_input)
+        
+        # Add fields to the layout
+        self.lbl_gemini_key = QLabel("Gemini API Key:")
+        self.lbl_gemini_model = QLabel("Gemini Model:")
+        layout_ai.addRow(self.lbl_gemini_key, self.api_key_input)
+        layout_ai.addRow(self.lbl_gemini_model, self.model_input)
+        
+        self.lbl_ollama_end = QLabel("Ollama Endpoint:")
+        self.lbl_ollama_mod = QLabel("Ollama Model:")
+        layout_ai.addRow(self.lbl_ollama_end, self.ollama_endpoint_input)
+        layout_ai.addRow(self.lbl_ollama_mod, self.ollama_model_input)
+        
         layout_ai.addRow(QLabel("AI Output Language:"), self.language_input)
 
         tab_ai.setWidget(ai_content)
@@ -337,9 +359,14 @@ class SettingsPage(QWidget):
         """
         config = read_json(PathManager.CONFIG_FILE)
         if config:
+            self.ai_provider_input.setCurrentText(config.get("AI_PROVIDER", "Gemini"))
             self.api_key_input.setText(config.get("GEMINI_API_KEY", ""))
             self.model_input.setText(config.get("GEMINI_MODEL", "gemini-1.5-pro"))
+            self.ollama_endpoint_input.setText(config.get("OLLAMA_ENDPOINT", "http://localhost:11434"))
+            self.ollama_model_input.setText(config.get("OLLAMA_MODEL", "llama3"))
             self.language_input.setCurrentText(config.get("AI_LANGUAGE", "English"))
+            self.toggle_ai_fields(self.ai_provider_input.currentText())
+            
             self.risk_free_input.setValue(config.get("RISK_FREE_RATE", 0.0) * 100)
             self.pacing_limit.setValue(config.get("PACING_LIMIT", 5))
             self.lookback_period.setValue(config.get("LOOKBACK_PERIOD", 5))
@@ -410,9 +437,6 @@ class SettingsPage(QWidget):
         if not isinstance(config, dict):
             config = {}
             
-        config["GEMINI_API_KEY"] = self.api_key_input.text().strip()
-        config["GEMINI_MODEL"] = self.model_input.text().strip()
-        config["AI_LANGUAGE"] = self.language_input.currentText()
         config["RISK_FREE_RATE"] = round(self.risk_free_input.value() / 100.0, 4)
         config["PACING_LIMIT"] = self.pacing_limit.value()
         config["LOOKBACK_PERIOD"] = self.lookback_period.value()
@@ -437,6 +461,13 @@ class SettingsPage(QWidget):
         config["CRYPTO_API_KEY"] = self.crypto_api_input.text().strip()
         config["CRYPTO_SECRET"] = self.crypto_secret_input.text().strip()
         config["CRYPTO_DUST_THRESHOLD"] = self.crypto_dust_input.value()
+
+        config["AI_PROVIDER"] = self.ai_provider_input.currentText()
+        config["GEMINI_API_KEY"] = self.api_key_input.text().strip()
+        config["GEMINI_MODEL"] = self.model_input.text().strip()
+        config["OLLAMA_ENDPOINT"] = self.ollama_endpoint_input.text().strip()
+        config["OLLAMA_MODEL"] = self.ollama_model_input.text().strip()
+        config["AI_LANGUAGE"] = self.language_input.currentText()
         
         # Handle shared Testnet key based on the active broker
         if self.active_broker_input.currentText() == "Alpaca":
@@ -493,3 +524,17 @@ class SettingsPage(QWidget):
         layout.addWidget(btn_close, alignment=Qt.AlignCenter)
         
         dialog.exec()
+
+    def toggle_ai_fields(self, provider: str):
+        """Shows/hides fields based on the selected AI provider."""
+        is_gemini = (provider == "Gemini")
+        
+        self.lbl_gemini_key.setVisible(is_gemini)
+        self.api_key_input.setVisible(is_gemini)
+        self.lbl_gemini_model.setVisible(is_gemini)
+        self.model_input.setVisible(is_gemini)
+        
+        self.lbl_ollama_end.setVisible(not is_gemini)
+        self.ollama_endpoint_input.setVisible(not is_gemini)
+        self.lbl_ollama_mod.setVisible(not is_gemini)
+        self.ollama_model_input.setVisible(not is_gemini)
