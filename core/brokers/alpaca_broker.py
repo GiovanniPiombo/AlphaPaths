@@ -160,7 +160,7 @@ class AlpacaBroker(BaseBroker):
             "sum_risky_weights": sum_risky_weights,
         }
 
-    async def fetch_historical_data(self, cache_file: str = "data/alpaca_prices_cache.parquet") -> pd.DataFrame:
+    async def fetch_historical_data(self, cache_file: str = str(PathManager.DATA_DIR / "alpaca_prices_cache.parquet")) -> pd.DataFrame:
         """
         Downloads daily historical data. Implements a Stock -> Crypto fallback mechanism.
         """

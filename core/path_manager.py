@@ -16,17 +16,29 @@
 import os
 import sys
 import json
+import platform
 from pathlib import Path
 from core.logger import app_logger
+
+def get_appdata_dir() -> Path:
+    """Returns the user data folder path (AppData on Windows) for external files."""
+    if platform.system() == "Windows":
+        base = os.getenv("APPDATA")
+        if base:
+            return Path(base) / "AlphaPaths"
+    # Fallback for macOS/Linux
+    return Path.home() / ".AlphaPaths"
 
 class PathManager:
     """
     Centralized path manager for the IBKR Portfolio Analyzer.
-    Automatically resolves absolute paths safely from any working directory.
+    Automatically resolves absolute paths safely from any working directory,
+    moving writable files to AppData when the app is bundled.
     """
     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        BASE_DIR = Path(sys._MEIPASS)
-        EXTERNAL_DIR = Path(sys.executable).parent
+        BASE_DIR = Path(sys._MEIPASS) 
+        EXTERNAL_DIR = get_appdata_dir()
+        EXTERNAL_DIR.mkdir(parents=True, exist_ok=True)
     else:
         BASE_DIR = Path(__file__).resolve().parent.parent
         EXTERNAL_DIR = BASE_DIR
@@ -37,6 +49,8 @@ class PathManager:
     WORKERS_DIR: Path = BASE_DIR / "workers"
     TESTS_DIR: Path = BASE_DIR / "tests"
 
+    DATA_DIR: Path = EXTERNAL_DIR / "data"
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
     CONFIG_FILE: Path = Path(os.getenv("APP_CONFIG_FILE", EXTERNAL_DIR / "config.json"))
     PROMPTS_FILE: Path = Path(os.getenv("APP_PROMPTS_FILE", EXTERNAL_DIR / "prompts.json"))
     MANUAL_PORTFOLIO_FILE: Path = Path(os.getenv("APP_MANUAL_PORTFOLIO_FILE", EXTERNAL_DIR / "manual_portfolio.json"))
@@ -54,7 +68,7 @@ class PathManager:
     @classmethod
     def init_configs(cls):
         """
-        Checks if configuration files exist. 
+        Checks if configuration files exist in the external directory (AppData). 
         If they are missing, it creates them from scratch with default values.
         """
         if not cls.CONFIG_FILE.exists():

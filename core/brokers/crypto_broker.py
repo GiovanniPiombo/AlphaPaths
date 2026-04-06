@@ -262,7 +262,7 @@ class CryptoBroker(BaseBroker):
             "raw_weights_dict":  self.weights_dict,
             "sum_risky_weights": sum_risky_weights,
         }
-    async def fetch_historical_data(self, cache_file: str = "data/crypto_prices_cache.parquet") -> pd.DataFrame:
+    async def fetch_historical_data(self, cache_file: str = str(PathManager.DATA_DIR / "crypto_prices_cache.parquet")) -> pd.DataFrame:
         """
         Downloads daily OHLCV candles for all risky assets.
         Implements incremental caching identical in logic to IBKRBroker:

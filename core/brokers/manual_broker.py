@@ -174,7 +174,7 @@ class ManualBroker(BaseBroker):
             "sum_risky_weights": self.sum_risky_weights    
         }
 
-    async def fetch_historical_data(self, cache_file: str = "data/manual_prices_cache.parquet") -> pd.DataFrame:
+    async def fetch_historical_data(self, cache_file: str = str(PathManager.DATA_DIR / "manual_prices_cache.parquet")) -> pd.DataFrame:
         """
         Downloads 5 years of historical data from Yahoo Finance.
         """

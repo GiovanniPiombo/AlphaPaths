@@ -16,14 +16,26 @@
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import sys
+import platform
+from pathlib import Path
+
+def get_appdata_dir() -> Path:
+    """Returns the user data folder path (AppData on Windows) for the bundled app."""
+    if platform.system() == "Windows":
+        base = os.getenv("APPDATA")
+        if base:
+            return Path(base) / "AlphaPaths"
+    return Path.home() / ".AlphaPaths"
 
 def setup_logger():
-    log_dir = "logs"
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-
-    log_file = os.path.join(log_dir, "AlphaPaths.log")
-
+    if getattr(sys, 'frozen', False):
+        base_dir = get_appdata_dir()
+    else:
+        base_dir = Path(__file__).resolve().parent.parent
+    log_dir = base_dir / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "AlphaPaths.log"
     logger = logging.getLogger("AlphaPaths")
     logger.setLevel(logging.DEBUG)
 
@@ -32,7 +44,7 @@ def setup_logger():
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    file_handler = RotatingFileHandler(log_file, maxBytes=5*1024*1024, backupCount=3)
+    file_handler = RotatingFileHandler(str(log_file), maxBytes=5*1024*1024, backupCount=3)
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.DEBUG)
 
