@@ -23,6 +23,7 @@ from core.ai_review import get_portfolio_analysis
 from core.utils import read_json
 from core.path_manager import PathManager
 from core.logger import app_logger
+from arch import arch_model
 
 class PortfolioManager:
     """
@@ -175,10 +176,23 @@ class PortfolioManager:
         annual_asset_returns = mean_daily_returns * self.TRADING_DAYS
         annual_cov_matrix = cov_matrix * self.TRADING_DAYS
 
-        alpha = 0.10
-        beta = 0.85
+        # Extract GARCH(1,1) Parameters using the arch library
+        scaled_returns = portfolio_daily_returns * 100.0
+        try:
+            am = arch_model(scaled_returns, vol='Garch', p=1, q=1, rescale=False)
+            garch_fit = am.fit(disp='off')
+            
+            alpha = garch_fit.params.get('alpha[1]', 0.10)
+            beta = garch_fit.params.get('beta[1]', 0.85)
+            # Rescale omega back down by dividing by (10000) to match the original return scale
+            omega = garch_fit.params.get('omega', port_variance * 10000 * (1 - alpha - beta)) / 10000.0
+        except Exception as e:
+            app_logger.error(f"GARCH fitting failed: {e}. Falling back to default parameters.")
+            alpha = 0.10
+            beta = 0.85
+            omega = port_variance * (1.0 - alpha - beta)
+
         daily_variance = port_variance
-        omega = daily_variance * (1.0 - alpha - beta)
 
         return {
             "total_mu": self.total_portfolio_mu,

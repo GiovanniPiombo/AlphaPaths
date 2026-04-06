@@ -102,7 +102,7 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 
 - Core Language: Python 3.9+
 - GUI Framework: PySide6 (Qt for Python), superqt
-- Data & Math: Pandas, NumPy, SciPy
+- Data & Math: Pandas, NumPy, SciPy, arch
 - Visualization: Qt Charts (PySide6)
 - Broker Integration:
   - Interactive Brokers: ib_async
