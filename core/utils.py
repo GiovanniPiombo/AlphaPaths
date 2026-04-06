@@ -149,3 +149,56 @@ def get_invalid_tickers(tickers: list[str]) -> list[str]:
             invalid_tickers.append(ticker)
             
     return invalid_tickers
+
+@staticmethod
+def enrich_and_format_positions(raw_positions: list) -> str:
+    """
+    Retrieves asset metadata via yfinance to prevent AI hallucinations
+    (e.g., mistaking VWCE.DE for the Volkswagen company instead of the Vanguard ETF).
+    Robustly handles both dict-based and list-based position payloads from different brokers.
+    """
+    formatted_list = []
+    
+    for pos in raw_positions:
+        ticker = ""
+        qty = 0
+        market_value = 0.0
+        
+        if isinstance(pos, dict):
+            ticker = pos.get('ticker', pos.get('symbol', ''))
+            qty = pos.get('quantity', 0)
+            market_value = pos.get('market_value', pos.get('marketValue', 0.0))
+        
+        elif isinstance(pos, (list, tuple)) and len(pos) > 0:
+            ticker = str(pos[0])
+            qty = pos[1] if len(pos) > 1 else 0
+            market_value = pos[-1] if len(pos) > 2 else 0.0
+        
+        if not ticker or not isinstance(ticker, str):
+            continue
+            
+        name = "Unknown"
+        category = "Generic Asset"
+        
+        try:
+            info = yf.Ticker(ticker).info
+            name = info.get('longName', info.get('shortName', ticker))
+            asset_type = info.get('quoteType', '')
+            sector = info.get('sector', '')
+            category = f"{asset_type} {sector}".strip()
+            if not category:
+                category = "Financial Asset"
+                
+        except Exception as e:
+            app_logger.warning(f"Could not fetch extra info for {ticker}: {e}")
+            
+        try:
+            market_value = float(market_value)
+        except (ValueError, TypeError):
+            market_value = 0.0
+            
+        formatted_list.append(
+            f"[{ticker}] {name} ({category}) | Qty: {qty} | Value: {market_value:.2f}"
+        )
+        
+    return "\n".join(formatted_list)

@@ -3,7 +3,7 @@ from google import genai
 from google.genai import types
 
 from core.ai.base import BaseAIProvider
-from core.utils import read_json, retry_with_backoff
+from core.utils import enrich_and_format_positions, read_json, retry_with_backoff
 from core.path_manager import PathManager
 from core.logger import app_logger
 
@@ -39,6 +39,10 @@ class GeminiProvider(BaseAIProvider):
 
             template = prompts_data["portfolio_analysis"]["user_prompt_template"]
             system_instruction = prompts_data["portfolio_analysis"]["system_instruction"]
+
+            if "ai_positions" not in portfolio_data:
+                raw_pos = portfolio_data.get("positions", [])
+                portfolio_data["ai_positions"] = enrich_and_format_positions(raw_pos)
             
             prompt = template.format(**portfolio_data)
             app_logger.info("Sending analysis request to Gemini API...")

@@ -1,7 +1,7 @@
 import json
 import requests
 from core.ai.base import BaseAIProvider
-from core.utils import read_json
+from core.utils import enrich_and_format_positions, read_json
 from core.path_manager import PathManager
 from core.logger import app_logger
 
@@ -28,6 +28,10 @@ class OllamaProvider(BaseAIProvider):
 
             template = prompts_data["portfolio_analysis"]["user_prompt_template"]
             system_instruction = prompts_data["portfolio_analysis"]["system_instruction"]
+
+            if "ai_positions" not in portfolio_data:
+                raw_pos = portfolio_data.get("positions", [])
+                portfolio_data["ai_positions"] = enrich_and_format_positions(raw_pos)
             
             prompt = template.format(**portfolio_data)
             app_logger.info(f"Sending analysis request to Ollama ({self.model_name}) at {self.endpoint}...")

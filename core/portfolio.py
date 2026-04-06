@@ -19,7 +19,7 @@ from core.brokers.base_broker import BaseBroker
 from core.gbm_model import GBMSimulator
 from core.merton_model import MJDSimulator
 from core.garch_model import GARCHSimulator
-from core.utils import read_json
+from core.utils import read_json, enrich_and_format_positions
 from core.path_manager import PathManager
 from core.logger import app_logger
 from arch import arch_model
@@ -82,7 +82,12 @@ class PortfolioManager:
         self.base_currency = data['currency']
         self.weights_dict = data['raw_weights_dict']
         self.sum_risky_weights = data['sum_risky_weights']
-        self.cash_weight = data['cash_weight'] / 100.0 
+        self.cash_weight = data['cash_weight'] / 100.0
+
+        if 'positions' in data and isinstance(data['positions'], list):
+            data['ai_positions'] = enrich_and_format_positions(data['positions'])
+        else:
+            data['ai_positions'] = "No positions found."
         
         return data
 
