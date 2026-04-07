@@ -4,7 +4,8 @@
 [![PySide6](https://img.shields.io/badge/GUI-PySide6-green)]()
 [![Multi-Broker](https://img.shields.io/badge/Broker-IBKR%20%7C%20Alpaca%20%7C%20Crypto%20%7C%20Manual-orange)]()
 [![Yahoo Finance](https://img.shields.io/badge/yfinance-Market%20Data-blueviolet)]()
-[![Tests](https://github.com/GiovanniPiombo/ibkr-portfolio-analyzer/actions/workflows/tests.yml/badge.svg)](https://github.com/GiovanniPiombo/ibkr-portfolio-analyzer/actions/workflows/tests.yml)
+[![AI](https://img.shields.io/badge/AI-Gemini%20%7C%20Ollama-yellow)]()
+[![Tests](https://github.com/GiovanniPiombo/AlphaPaths/actions/workflows/tests.yml/badge.svg)](https://github.com/GiovanniPiombo/AlphaPaths/actions/workflows/tests.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 AlphaPaths is a professional-grade desktop application for advanced risk analysis, Monte Carlo simulation, and portfolio optimization. It features a modular multi-broker architecture that supports direct connections to Interactive Brokers (IBKR), Alpaca, and major Crypto Exchanges (via CCXT), or a fully functional Manual Mode using Yahoo Finance—making it accessible to any investor, regardless of their brokerage.
@@ -24,7 +25,7 @@ The platform projects future portfolio values using stochastic models (Geometric
 *   **Monte Carlo Simulation:** Uses Geometric Brownian Motion to project thousands of possible future portfolio paths. Calculates key scenarios: Worst Case (5th percentile), Median (50th), and Best Case (95th).
 *   **Merton Jump-Diffusion Stress Testing:** Extends standard GBM by incorporating discrete price jumps (Poisson processes) to model sudden market crashes and extreme tail events, providing a more conservative risk assessment. Parameters are automatically calibrated from your portfolio's historical data using a configurable Jump Threshold.
 *   **Core-Satellite Portfolio Optimization:** Applies Modern Portfolio Theory (MPT) to calculate the Efficient Frontier and Maximum Sharpe Ratio portfolio. The unique "Core-Satellite" feature allows you to "lock" strategic core assets (e.g., a broad-market ETF) at their current weight, forcing the optimizer to only reallocate the remaining "satellite" positions, perfect for maintaining long-term strategic allocations while tactically optimizing the rest.
-*   **AI-Powered Insights:** Sends your portfolio composition and simulation results to Google's Gemini API, generating a structured, natural language report with personalized observations and suggestions. The prompt template is fully customizable and supports multiple languages.
+*    **AI-Powered Insights:** Sends your portfolio composition and simulation results to either **Google's Gemini API** or a **local Ollama** instance (Llama 3, Mistral, etc.), generating a structured, natural language report with personalized observations. The prompt template is fully customizable and supports multiple languages.
 *   **Optimized Performance:** Employs a multi-threaded architecture (QThread) to keep the UI responsive. Uses a FastMathWorker to instantly recalculate simulations from cached risk metrics without re-fetching historical data.
 *   **Professional UI:** Clean, dark-themed interface, built with PySide6 and custom QSS styling.
 *   **Interactive Visualizations:** Dynamic QCharts embedded in the UI display the simulation cone (with background paths and highlighted percentile lines) and the Efficient Frontier. The simulation graph supports zoom clamping, rubber-band selection, and mouse wheel zoom for detailed analysis of projection paths.
@@ -41,15 +42,15 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 │
 ├── pages/                           # UI SCREENS: Each file represents a tab in the application.
 │   ├── dashboard_page.py            # Displays portfolio summary (NLV, Cash, PnL) and open positions. Triggers IBKRWorker.
-│   ├── simulation_page.py           # Monte Carlo controls (years, simulations). Displays results and AI's feedback. Manages SimulationWorker and FastMathWorker.
-│   ├── settings_page.py             # Settings Page
+│   ├── simulation_page.py           # Manages SimulationWorker and FastMathWorker and displays results and AI's feedback.
+│   ├── settings_page.py             # Settings Page.
 │   └── optimization_page.py         # Portfolio optimization interface. Displays Efficient Frontier and actionable trade recommendations.
 │
 ├── workers/                         # BACKGROUND THREADS: Bridge between the UI and the Core logic.
 │   ├── data_sync_thread.py          # DataSyncWorker: Fetches live portfolio data via the active broker.
 │   ├── simulation_thread.py         # SimulationWorker & FastMathWorker: Handle full simulation setup.
-│   ├── optimization_thread.py       # OptimizationWorker: Runs Markowitz optimization.
-│   └── ai_thread.py                 # AIWorker: Manages communication with the Gemini API.
+│   ├── optimization_thread.py       # OptimizationWorker: Runs Markowitz optimization with core-satellite constraints.
+│   └── ai_thread.py                 # AIWorker: Manages communication with Gemini or Ollama via the AI factory.
 │
 ├── core/                            # PURE BUSINESS LOGIC: No Qt dependencies. Can be tested independently.
 │   ├── brokers/                     # BROKER ADAPTERS: Multi-broker architecture via Factory Pattern.
@@ -59,30 +60,39 @@ The codebase is meticulously organized following the **Separation of Concerns** 
 │   │   ├── alpaca_broker.py         # Alpaca API (stocks & crypto via fallback) implementation.
 │   │   ├── crypto_broker.py         # Generic crypto exchange (CCXT) implementation.
 │   │   └── manual_broker.py         # ManualBroker: Adapter for Yahoo Finance & local JSON.
-│   ├── portfolio.py                 # PortfolioManager: The brain of the app. Agnostic to the specific broker.
+│   │
+│   ├── ai/                          # AI PROVIDERS: Modular architecture for LLM integration.
+│   │   ├── base.py                  # BaseAIProvider: Abstract interface for all AI providers.
+│   │   ├── factory.py               # AIFactory: Dynamically instantiates the correct AI provider (Gemini/Ollama).
+│   │   ├── gemini.py                # GeminiProvider: Google Gemini API implementation.
+│   │   └── ollama.py                # OllamaProvider: Local LLM implementation (Llama 3, Mistral, etc.).
+│   │
+│   ├── portfolio.py                 # PortfolioManager: Orchestrates data fetching, risk calculations, and simulation workflows.
 │   ├── gbm_model.py                 # GBMSimulator: The mathematical engine. Runs vectorized GBM simulations using NumPy.
 │   ├── merton_model.py              # MJDSimulator: The mathematical engine. Runs vectorized MJD simulations using NumPy.
-│   ├── ai_review.py                 # Handles prompting and communication with the Google Gemini API.
-│   ├── graph.py                     # Standalone plotting functions (used for debugging, as the UI uses its own canvas).
-│   ├── path_manager.py              # Centralized path management for assets, configs, and prompts across the application.
+│   ├── garch_model.py               # GARCHSimulator: Runs vectorized GARCH(1,1) simulations for time-varying volatility.
 │   ├── markowitz_model.py           # MarkowitzOptimizer: Implements Modern Portfolio Theory for efficient frontier and Sharpe maximization.
-│   └── utils.py                     # Shared utility functions (e.g., reading JSON files).
+│   ├── path_manager.py              # Centralized path management for assets, configs, and prompts across the application.
+│   ├── logger.py                    # Centralized logging setup with RotatingFileHandler, dual console/file output, and platform-specific paths.
+│   └── utils.py                     # Shared utility functions
+│
+├── components/                      # UI COMPONENTS
+│   ├── chart_widget.py              # Monte Carlo Simulation QChart (GBM, Merton, GARCH)
+│   ├── markowitz_chart.py           # MarkowitzChartView: Custom QChartView for Efficient Frontier rendering.
+│   ├── ai_widget.py                 # AIInsightWidget: Reusable component for displaying AI analysis from Gemini or Ollama.
+│   └── manual_portfolio_widget.py   # Widget for manual portfolio input (ticker/quantity table with add/remove rows).
 │
 ├── tests/                           # UNIT TESTS
 │   ├── conftest.py                  # Pytest configuration and fixtures
-│   ├── test_gbm.py                  # Pytest suite for the GBMSimulator, testing edge cases and statistical properties.
-│   └── test_merton_model.py         # Pytest suite for the MJDSimulator, testing edge cases and statistical properties.
+│   ├── test_gbm.py                  # Pytest suite for the GBMSimulator
+│   ├── test_merton_model.py         # Pytest suite for the MJDSimulator
+│   └── test_garch_model.py          # Pytest suite for the GARCHSimulator
 │
 ├── assets/                          # ASSETS
 │   ├── Icon.ico                     # Application icon (Windows .ico format)
 │   ├── Icon.png                     # Application icon (PNG format for cross-platform use)
 │   ├── SetupIcon.ico                # Setup Icon 
 │   └── style.qss                    # Qt Style Sheet for the application's dark theme.
-│
-├── components/                      # Components
-│   ├── chart_widget                 # Montecarlo Simulation QChart
-│   ├── markowitz_chart.py           # MarkowitzChartView: Custom QChartView for Efficient Frontier rendering.
-│   └── ai_widget.py                 # AIInsightWidget: Reusable component for displaying AI analysis.
 │
 ├── .github/                         # GITHUB ACTIONS
 │   └── workflows/
@@ -109,7 +119,7 @@ The codebase is meticulously organized following the **Separation of Concerns** 
   - Alpaca: alpaca-py
   - Crypto Exchanges: ccxt
 - Market Data (Manual Mode): Yahoo Finance (yfinance)
-- Artificial Intelligence: Google Gemini API (google-generativeai)
+- Artificial Intelligence: Google Gemini API (google-generativeai) OR Ollama (local LLMs via requests)
 - Testing: Pytest
 
 ## Installation and Setup
@@ -246,9 +256,10 @@ Navigate to the Settings tab. Select your preferred broker from the "Active Brok
 
 #### Interface Navigation
 - **Dashboard:** Upon starting, the app automatically connects to the active broker and fetches your portfolio data. Click "Refresh Data" to manually update.
-- **Simulation:** Navigate to the "Monte Carlo" tab. After the initial preload, adjust the years and number of simulations (using the intuitive sliders) and select the model type (Standard GBM or Merton Stress Test). Click "Run Simulation" to instantly see new projections.
+- **Simulation:** Navigate to the "Monte Carlo" tab. After the initial preload, adjust the years and number of simulations (using the intuitive sliders) and select the model type (Standard GBM, Merton Stress Test, or GARCH Volatility). Click "Run Simulation" to instantly see new projections.
 - **Optimization:** After loading portfolio data, go to the "Optimization" tab. Lock any assets you wish to keep as your core strategic holdings by checking the box in the table. Click "Run Optimization" to calculate the constrained Efficient Frontier and the optimal Max Sharpe portfolio. The page will display the improvement in Sharpe ratio and a detailed action table with Buy/Sell/Hold recommendations for each asset.
 - **AI Insights:** The AI analysis is displayed directly on the Simulation page. It automatically triggers after each simulation run, providing a detailed report on your portfolio's risk and potential in your preferred language.
+- **Settings:** Configure your Gemini or Ollama credentials, select your AI language, set risk-free rate, lookback period, jump threshold for Merton model, and manage all broker connections. The "About & Licenses" tab provides copyright information and third-party license details.
 
 ## Core-Satellite Optimization
 
@@ -259,7 +270,7 @@ The optimization module implements a **Core-Satellite** investment strategy:
 
 This approach allows you to maintain your long-term strategic allocations while tactically optimizing the tactical or speculative portion of your portfolio.
 
-## Simulation Models: GBM vs. Merton
+## Simulation Models: GBM vs. Merton vs. GARCH
 
 The application offers two distinct Monte Carlo simulation models:
 
@@ -267,6 +278,7 @@ The application offers two distinct Monte Carlo simulation models:
 |-------|-------------|---------------|
 | **Standard GBM** (Geometric Brownian Motion) | Assumes continuous, normally distributed price movements with constant drift and volatility. | Standard market conditions, baseline projections, and when you expect relatively stable markets. |
 | **Merton Stress Test** (Jump-Diffusion) | Extends GBM by adding discrete price jumps (Poisson process) to model sudden, discontinuous events like market crashes or flash crashes. | Stress testing, bear market scenarios, and when you want a more conservative risk assessment that accounts for tail risk. |
+| **GARCH(1,1)** (Generalized Autoregressive Conditional Heteroskedasticity) | Models time-varying volatility with persistence (β) and reaction to market shocks (α). Captures volatility clustering. | Realistic market scenarios, periods of alternating high/low volatility. |
 
 The Merton model parameters (`λ` for jump frequency, `m` for average jump size, `ν` for jump volatility) are automatically calibrated from your portfolio's historical data using the configurable **Jump Threshold** setting in the Settings page.
 
@@ -276,6 +288,18 @@ The core mathematical logic is thoroughly tested. To run the test suite:
 ```bash
    pytest tests/ -v
 ```
+
+## Logging
+
+AlphaPaths maintains a detailed log file for debugging and monitoring purposes:
+
+- **Location:**
+  - **When running from source** (development): `./logs/AlphaPaths.log` (project root directory)
+  - **When running the bundled executable** (Windows installer or PyInstaller build): `%APPDATA%\AlphaPaths\logs\AlphaPaths.log`
+  - **When running the bundled executable** (macOS/Linux): `~/.AlphaPaths/logs/AlphaPaths.log`
+
+- **Rotation:** Files rotate at 5MB with 3 backups retained
+- **Contents:** Timestamped debug, info, warning, and error messages from all components (API calls, simulations, broker connections)
 
 ## Contributing
 
